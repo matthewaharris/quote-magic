@@ -21,9 +21,14 @@ export async function getContractor() {
     return { supabase, user, contractor: existing as Contractor };
   }
 
+  // Upsert: layout and page render in parallel on first login, so two
+  // creates can race — onConflict makes this idempotent.
   const { data: created, error } = await supabase
     .from("contractors")
-    .insert({ auth_user_id: user.id, email: user.email })
+    .upsert(
+      { auth_user_id: user.id, email: user.email },
+      { onConflict: "auth_user_id" }
+    )
     .select("*")
     .single();
 

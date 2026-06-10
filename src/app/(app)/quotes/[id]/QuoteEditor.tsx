@@ -8,6 +8,7 @@ import {
   type QuoteLineItem,
 } from "@/lib/types";
 import { addLineToPriceBook, saveQuote, type EditableLine } from "./actions";
+import SendPanel from "./SendPanel";
 
 type Line = EditableLine & { _key: string; _savedToPb?: boolean };
 
@@ -311,6 +312,8 @@ export default function QuoteEditor({
           <p className="mt-2 text-center text-sm text-zinc-600">{message}</p>
         )}
       </div>
+
+      <SendPanel quote={quote} />
     </div>
   );
 }

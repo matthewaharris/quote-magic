@@ -30,6 +30,26 @@ export async function sendEmail(input: {
   return { ok: true, stubbed: false };
 }
 
+// Generic notification template: heading, body, optional CTA button.
+export function actionEmailHtml(input: {
+  heading: string;
+  body: string;
+  url?: string;
+  cta?: string;
+}) {
+  return `
+  <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+    <h2 style="margin:0 0 8px">${input.heading}</h2>
+    <p style="margin:0;color:#555">${input.body}</p>
+    ${
+      input.url
+        ? `<a href="${input.url}" style="display:block;margin-top:16px;background:#18181b;color:#fff;text-align:center;padding:14px;border-radius:12px;text-decoration:none;font-weight:600">${input.cta ?? "Open"}</a>`
+        : ""
+    }
+    <p style="margin-top:16px;font-size:12px;color:#999">Sent with QuoteMagic</p>
+  </div>`;
+}
+
 export function quoteEmailHtml(input: {
   businessName: string;
   title: string;

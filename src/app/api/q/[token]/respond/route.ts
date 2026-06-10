@@ -38,6 +38,17 @@ export async function POST(
     .from("quote_events")
     .insert({ quote_id: quote.id, type: newStatus });
 
+  // Acceptance opens a job — this drives scheduling and the rest of the
+  // post-accept lifecycle.
+  if (action === "accept") {
+    await supabase
+      .from("jobs")
+      .upsert(
+        { quote_id: quote.id, contractor_id: quote.contractor_id },
+        { onConflict: "quote_id", ignoreDuplicates: true }
+      );
+  }
+
   // Notify the contractor.
   const { data: contractor } = await supabase
     .from("contractors")

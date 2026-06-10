@@ -4,13 +4,20 @@ import {
   formatDuration,
   formatMoney,
   type Contractor,
+  type Invoice,
+  type Job,
   type Quote,
   type QuoteLineItem,
 } from "@/lib/types";
+import { formatSlotRange } from "@/lib/scheduling";
 import RespondButtons from "./RespondButtons";
+import ScheduleCalendar from "./ScheduleCalendar";
+import ConfirmComplete from "./ConfirmComplete";
+import PayInvoice from "./PayInvoice";
 
-// Public customer-facing quote page, keyed by unguessable share token.
-// Uses the service-role client — RLS does not apply here by design.
+// Public customer-facing page for the full job lifecycle, keyed by
+// unguessable share token. Uses the service-role client — RLS does not
+// apply here by design.
 export default async function PublicQuotePage({
   params,
 }: {
@@ -54,16 +61,49 @@ export default async function PublicQuotePage({
     quote.status = "viewed";
   }
 
-  const responded = quote.status === "accepted" || quote.status === "declined";
+  // Load the job; quotes accepted before the jobs table existed get one
+  // backfilled here.
+  let job: Job | null = null;
+  if (quote.status === "accepted") {
+    const { data: jobData } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("quote_id", quote.id)
+      .maybeSingle();
+    job = (jobData as Job) ?? null;
+    if (!job) {
+      const { data: created } = await supabase
+        .from("jobs")
+        .upsert(
+          { quote_id: quote.id, contractor_id: quote.contractor_id },
+          { onConflict: "quote_id", ignoreDuplicates: false }
+        )
+        .select("*")
+        .single();
+      job = (created as Job) ?? null;
+    }
+  }
+
+  let invoice: Invoice | null = null;
+  if (job && ["invoiced", "paid", "confirmed"].includes(job.status)) {
+    const { data: invData } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("job_id", job.id)
+      .maybeSingle();
+    invoice = (invData as Invoice) ?? null;
+  }
+
+  const businessName = contractor.business_name || "Your contractor";
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-4 py-8">
       <header className="text-center">
         <p className="text-xs uppercase tracking-widest text-zinc-400">
-          Quote from
+          {invoice ? "Invoice from" : "Quote from"}
         </p>
         <h1 className="mt-1 text-2xl font-bold text-zinc-900">
-          {contractor.business_name || "Your contractor"}
+          {businessName}
         </h1>
         {contractor.phone && (
           <p className="mt-1 text-sm text-zinc-500">{contractor.phone}</p>
@@ -120,7 +160,7 @@ export default async function PublicQuotePage({
           </p>
         </div>
 
-        {quote.assumptions.length > 0 && (
+        {quote.assumptions.length > 0 && !invoice && (
           <div className="mt-4 rounded-xl bg-zinc-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
               Assumptions
@@ -134,21 +174,96 @@ export default async function PublicQuotePage({
         )}
       </section>
 
-      <section className="mt-6">
-        {responded ? (
-          <div
-            className={`rounded-2xl p-5 text-center font-semibold ${
-              quote.status === "accepted"
-                ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
-                : "bg-red-50 text-red-800 ring-1 ring-red-200"
-            }`}
-          >
-            {quote.status === "accepted"
-              ? `✓ You accepted this quote. ${contractor.business_name || "Your contractor"} will reach out to schedule the work.`
-              : "You declined this quote."}
+      <section className="mt-6 space-y-4">
+        {quote.status === "declined" && (
+          <div className="rounded-2xl bg-red-50 p-5 text-center font-semibold text-red-800 ring-1 ring-red-200">
+            You declined this quote.
           </div>
-        ) : (
+        )}
+
+        {quote.status !== "declined" && quote.status !== "accepted" && (
           <RespondButtons token={token} />
+        )}
+
+        {job?.status === "unscheduled" && (
+          <>
+            <div className="rounded-2xl bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+              ✓ Quote accepted — now pick a time that works for you.
+            </div>
+            <ScheduleCalendar token={token} />
+          </>
+        )}
+
+        {job?.status === "scheduled" && job.scheduled_start && (
+          <div className="rounded-2xl bg-sky-50 p-5 text-center ring-1 ring-sky-200">
+            <p className="text-sm font-medium text-sky-700">
+              📅 Work scheduled
+            </p>
+            <p className="mt-1 text-lg font-bold text-sky-900">
+              {formatSlotRange(job.scheduled_start, job.scheduled_end!)}
+            </p>
+            <p className="mt-1 text-xs text-sky-700">
+              {businessName} will see you then.
+            </p>
+          </div>
+        )}
+
+        {job?.status === "done_reported" && (
+          <ConfirmComplete token={token} businessName={businessName} />
+        )}
+
+        {invoice && (
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-zinc-400">
+                  Invoice
+                </p>
+                <p className="font-bold text-zinc-900">{invoice.number}</p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${
+                  invoice.status === "paid"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {invoice.status}
+              </span>
+            </div>
+            <div className="mt-3 flex justify-between text-sm text-zinc-500">
+              <span>Issued {new Date(invoice.issued_at).toLocaleDateString()}</span>
+              <span>Due {new Date(invoice.due_at).toLocaleDateString()}</span>
+            </div>
+            <div className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-lg font-bold text-zinc-900">
+              <span>Amount due</span>
+              <span>
+                {invoice.status === "paid" ? "$0.00" : formatMoney(Number(invoice.total))}
+              </span>
+            </div>
+            {invoice.status === "paid" && (
+              <p className="mt-1 text-xs text-zinc-400">
+                Paid {invoice.paid_at ? new Date(invoice.paid_at).toLocaleString() : ""} · Ref{" "}
+                {invoice.payment_ref}
+              </p>
+            )}
+          </div>
+        )}
+
+        {job?.status === "invoiced" && invoice && (
+          <PayInvoice token={token} total={formatMoney(Number(invoice.total))} />
+        )}
+
+        {job?.status === "paid" && (
+          <div className="rounded-2xl bg-emerald-50 p-5 text-center ring-1 ring-emerald-200">
+            <p className="text-2xl">🎉</p>
+            <p className="mt-1 font-bold text-emerald-900">
+              Payment received — thank you!
+            </p>
+            <p className="mt-1 text-sm text-emerald-700">
+              {businessName} appreciates your business.
+            </p>
+          </div>
         )}
       </section>
 

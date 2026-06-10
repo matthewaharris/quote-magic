@@ -72,10 +72,82 @@ export interface QuoteLineItem {
   sort_order: number;
 }
 
+export type JobStatus =
+  | "unscheduled"
+  | "scheduled"
+  | "done_reported"
+  | "confirmed"
+  | "invoiced"
+  | "paid";
+
+export interface Job {
+  id: string;
+  quote_id: string;
+  contractor_id: string;
+  status: JobStatus;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  done_reported_at: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
+export interface Invoice {
+  id: string;
+  job_id: string;
+  quote_id: string;
+  number: string;
+  subtotal: number;
+  tax_rate: number;
+  total: number;
+  status: "due" | "paid";
+  issued_at: string;
+  due_at: string;
+  paid_at: string | null;
+  payment_ref: string | null;
+}
+
+// Display label/color for a quote, preferring job stage once one exists.
+export function stageBadge(
+  quoteStatus: QuoteStatus,
+  jobStatus?: JobStatus | null
+): { label: string; className: string } {
+  if (jobStatus && jobStatus !== "unscheduled") {
+    const map: Record<JobStatus, { label: string; className: string }> = {
+      unscheduled: { label: "accepted", className: "bg-emerald-100 text-emerald-700" },
+      scheduled: { label: "scheduled", className: "bg-sky-100 text-sky-700" },
+      done_reported: { label: "awaiting OK", className: "bg-amber-100 text-amber-700" },
+      confirmed: { label: "confirmed", className: "bg-emerald-100 text-emerald-700" },
+      invoiced: { label: "invoiced", className: "bg-indigo-100 text-indigo-700" },
+      paid: { label: "paid", className: "bg-emerald-200 text-emerald-900" },
+    };
+    return map[jobStatus];
+  }
+  const map: Record<QuoteStatus, { label: string; className: string }> = {
+    draft: { label: "draft", className: "bg-zinc-100 text-zinc-700" },
+    sent: { label: "sent", className: "bg-blue-100 text-blue-700" },
+    viewed: { label: "viewed", className: "bg-violet-100 text-violet-700" },
+    accepted: { label: "accepted", className: "bg-emerald-100 text-emerald-700" },
+    declined: { label: "declined", className: "bg-red-100 text-red-700" },
+  };
+  return map[quoteStatus];
+}
+
 export interface QuoteEvent {
   id: string;
   quote_id: string;
-  type: "created" | "sent" | "viewed" | "accepted" | "declined" | "edited";
+  type:
+    | "created"
+    | "sent"
+    | "viewed"
+    | "accepted"
+    | "declined"
+    | "edited"
+    | "scheduled"
+    | "done_reported"
+    | "confirmed"
+    | "invoiced"
+    | "paid";
   meta: Record<string, unknown>;
   created_at: string;
 }

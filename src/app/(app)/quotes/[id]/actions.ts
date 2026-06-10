@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
+import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { issueInvoice } from "@/lib/invoice";
 
 export interface EditableLine {
   id?: string;
@@ -122,4 +124,87 @@ export async function addLineToPriceBook(line: {
   if (error || !data) return { ok: false as const, message: error?.message };
   revalidatePath("/pricebook");
   return { ok: true as const, priceBookItemId: data.id };
+}
+
+// Contractor reports the job done; customer gets asked to confirm.
+export async function markJobComplete(jobId: string) {
+  const { supabase, contractor } = await requireContractor();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, quote_id, contractor_id, status")
+    .eq("id", jobId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!job) return { ok: false, message: "Job not found." };
+  if (!["unscheduled", "scheduled"].includes(job.status)) {
+    return { ok: false, message: "Job is already past this step." };
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      status: "done_reported",
+      done_reported_at: new Date().toISOString(),
+    })
+    .eq("id", jobId);
+  if (error) return { ok: false, message: error.message };
+
+  await supabase
+    .from("quote_events")
+    .insert({ quote_id: job.quote_id, type: "done_reported" });
+
+  // Ask the customer to confirm, when we have their email.
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("title, share_token, customer_id")
+    .eq("id", job.quote_id)
+    .single();
+  let emailed = false;
+  if (quote?.customer_id) {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("email")
+      .eq("id", quote.customer_id)
+      .maybeSingle();
+    if (customer?.email) {
+      const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+      await sendEmail({
+        to: customer.email,
+        subject: `${contractor.business_name || "Your contractor"} finished the job — please confirm`,
+        html: actionEmailHtml({
+          heading: "Is the job complete?",
+          body: `${contractor.business_name || "Your contractor"} reports "<strong>${quote.title}</strong>" is finished. Take a look and confirm so we can send your invoice.`,
+          url,
+          cta: "Review & confirm",
+        }),
+      });
+      emailed = true;
+    }
+  }
+
+  revalidatePath(`/quotes`);
+  return { ok: true, emailed };
+}
+
+// Escape hatch: invoice without waiting for customer confirmation.
+export async function generateInvoiceNow(jobId: string) {
+  const { supabase, contractor } = await requireContractor();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, quote_id, contractor_id, status")
+    .eq("id", jobId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!job) return { ok: false, message: "Job not found." };
+  if (!["done_reported", "confirmed"].includes(job.status)) {
+    return { ok: false, message: "Mark the job complete first." };
+  }
+
+  const result = await issueInvoice(supabase, job);
+  if (!result.ok) return { ok: false, message: result.message };
+
+  revalidatePath(`/quotes`);
+  return { ok: true, number: result.invoice.number as string };
 }

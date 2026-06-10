@@ -4,10 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import {
   formatDuration,
   formatMoney,
+  type Invoice,
+  type Job,
   type Quote,
   type QuoteLineItem,
 } from "@/lib/types";
 import { addLineToPriceBook, saveQuote, type EditableLine } from "./actions";
+import JobPanel from "./JobPanel";
 import SendPanel from "./SendPanel";
 
 type Line = EditableLine & { _key: string; _savedToPb?: boolean };
@@ -31,9 +34,13 @@ function toEditable(items: QuoteLineItem[]): Line[] {
 export default function QuoteEditor({
   quote,
   initialLines,
+  job,
+  invoice,
 }: {
   quote: Quote;
   initialLines: QuoteLineItem[];
+  job?: Job | null;
+  invoice?: Invoice | null;
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
@@ -313,7 +320,8 @@ export default function QuoteEditor({
         )}
       </div>
 
-      <SendPanel quote={quote} />
+      {job && <JobPanel job={job} invoice={invoice ?? null} />}
+      {!job && <SendPanel quote={quote} />}
     </div>
   );
 }

@@ -57,3 +57,64 @@ export async function seedDemoPriceBook() {
   revalidatePath("/pricebook");
   return { ok: true, message: `Added ${DEMO_ITEMS.length} demo items.` };
 }
+
+export interface PriceBookInput {
+  name: string;
+  description: string | null;
+  category: string | null;
+  unit: string;
+  unit_cost: number;
+  est_minutes_per_unit: number;
+}
+
+function cleanItem(input: PriceBookInput) {
+  return {
+    name: input.name.trim(),
+    description: input.description?.trim() || null,
+    category: input.category?.trim() || "General",
+    unit: input.unit.trim() || "each",
+    unit_cost: Math.max(0, Number(input.unit_cost) || 0),
+    est_minutes_per_unit: Math.max(
+      0,
+      Math.round(Number(input.est_minutes_per_unit) || 0)
+    ),
+  };
+}
+
+export async function addPriceBookItem(input: PriceBookInput) {
+  const { supabase, contractor } = await requireContractor();
+  if (!input.name.trim()) return { ok: false, message: "Name is required." };
+
+  const { error } = await supabase.from("price_book_items").insert({
+    ...cleanItem(input),
+    contractor_id: contractor.id,
+    source: "manual",
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/pricebook");
+  return { ok: true };
+}
+
+export async function updatePriceBookItem(id: string, input: PriceBookInput) {
+  const { supabase, contractor } = await requireContractor();
+  const { error } = await supabase
+    .from("price_book_items")
+    .update(cleanItem(input))
+    .eq("id", id)
+    .eq("contractor_id", contractor.id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/pricebook");
+  return { ok: true };
+}
+
+export async function deletePriceBookItem(id: string) {
+  const { supabase, contractor } = await requireContractor();
+  const { error } = await supabase
+    .from("price_book_items")
+    .delete()
+    .eq("id", id)
+    .eq("contractor_id", contractor.id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/pricebook");
+  return { ok: true };
+}

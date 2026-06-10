@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { requireContractor } from "@/lib/contractor";
-import { formatMoney, type PriceBookItem } from "@/lib/types";
+import type { PriceBookItem } from "@/lib/types";
+import PriceBookManager from "./PriceBookManager";
 import { seedDemoPriceBook } from "./actions";
 
 export default async function PriceBookPage() {
@@ -22,39 +24,27 @@ export default async function PriceBookPage() {
       </p>
 
       {items.length === 0 ? (
-        <div className="mt-10 text-center">
+        <div className="mt-8 space-y-3 text-center">
           <p className="text-zinc-500">Your price book is empty.</p>
+          <Link
+            href="/onboarding"
+            className="block w-full rounded-xl bg-amber-600 px-5 py-3.5 font-semibold text-white"
+          >
+            🎙️ Teach the AI from past jobs
+          </Link>
           <form
             action={async () => {
               "use server";
               await seedDemoPriceBook();
             }}
           >
-            <button className="mt-4 rounded-xl bg-zinc-900 px-5 py-3 font-semibold text-white">
-              Load demo electrician price book
+            <button className="w-full rounded-xl border border-zinc-300 bg-white px-5 py-3 font-medium text-zinc-700">
+              Or load the demo electrician price book
             </button>
           </form>
         </div>
       ) : (
-        <ul className="mt-4 space-y-2">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-xl border border-zinc-200 bg-white p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-zinc-900">{item.name}</span>
-                <span className="shrink-0 text-sm font-semibold text-zinc-700">
-                  {formatMoney(item.unit_cost)}/{item.unit}
-                </span>
-              </div>
-              <div className="mt-0.5 flex justify-between text-xs text-zinc-500">
-                <span>{item.category}</span>
-                <span>~{item.est_minutes_per_unit} min/{item.unit}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <PriceBookManager items={items} />
       )}
     </div>
   );

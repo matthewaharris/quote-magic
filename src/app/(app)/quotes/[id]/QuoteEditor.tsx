@@ -39,12 +39,14 @@ export default function QuoteEditor({
   job,
   invoice,
   changeOrders = [],
+  sendShareToken,
 }: {
   quote: Quote;
   initialLines: QuoteLineItem[];
   job?: Job | null;
   invoice?: Invoice | null;
   changeOrders?: ChangeOrder[];
+  sendShareToken?: string;
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
@@ -338,7 +340,7 @@ export default function QuoteEditor({
           />
         </>
       )}
-      {!job && <SendPanel quote={quote} />}
+      {!job && <SendPanel quote={quote} shareToken={sendShareToken} />}
     </div>
   );
 }

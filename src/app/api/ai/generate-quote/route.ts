@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getContractor } from "@/lib/contractor";
-import { generateQuote, type QuoteImage } from "@/lib/ai/quote";
+import {
+  generateQuote,
+  generateTieredQuote,
+  type QuoteImage,
+} from "@/lib/ai/quote";
 import { getTrialStatus } from "@/lib/trial";
 import type { PriceBookItem } from "@/lib/types";
 
@@ -33,6 +37,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     transcript?: string;
+    tiered?: boolean;
     images?: { media_type?: string; data?: string }[];
   } | null;
   const transcript = body?.transcript?.trim();
@@ -88,15 +93,145 @@ export async function POST(request: Request) {
     .eq("contractor_id", contractor.id);
   const priceBook = (pbData ?? []) as PriceBookItem[];
 
+  // Never trust model arithmetic — recompute all money/time on the server.
+  const validPbIds = new Set(priceBook.map((i) => i.id));
+  type DraftLine = {
+    matched_price_book_item_id: string | null;
+    name: string;
+    description: string;
+    qty: number;
+    unit: string;
+    unit_price: number;
+    est_minutes: number;
+    confidence: number;
+    is_new_item: boolean;
+  };
+  function computeLines(draftLines: DraftLine[]) {
+    const lines = draftLines.map((li, idx) => {
+      const qty = Math.max(0, li.qty);
+      const unitPrice = Math.max(0, li.unit_price);
+      return {
+        price_book_item_id:
+          li.matched_price_book_item_id &&
+          validPbIds.has(li.matched_price_book_item_id)
+            ? li.matched_price_book_item_id
+            : null,
+        name: li.name,
+        description: li.description,
+        qty,
+        unit: li.unit,
+        unit_price: unitPrice,
+        line_total: Math.round(qty * unitPrice * 100) / 100,
+        est_minutes: Math.max(0, Math.round(li.est_minutes)),
+        ai_confidence: Math.min(1, Math.max(0, li.confidence)),
+        is_new_item: li.is_new_item || !li.matched_price_book_item_id,
+        sort_order: idx,
+      };
+    });
+    const subtotal =
+      Math.round(lines.reduce((s, l) => s + l.line_total, 0) * 100) / 100;
+    const estTotalMinutes = lines.reduce((s, l) => s + l.est_minutes, 0);
+    return { lines, subtotal, estTotalMinutes };
+  }
+
+  async function insertQuote(input: {
+    title: string;
+    jobSummary: string;
+    assumptions: string[];
+    questions: string[];
+    draftLines: DraftLine[];
+    tier?: "good" | "better" | "best";
+    tierGroupId?: string;
+  }) {
+    const { lines, subtotal, estTotalMinutes } = computeLines(input.draftLines);
+    const { data: quote, error: quoteError } = await supabase
+      .from("quotes")
+      .insert({
+        contractor_id: contractor.id,
+        title: input.title,
+        job_summary: input.jobSummary,
+        dictation_transcript: transcript,
+        subtotal,
+        total: subtotal,
+        est_total_minutes: estTotalMinutes,
+        assumptions: input.assumptions,
+        questions: input.questions,
+        tier: input.tier ?? null,
+        tier_group_id: input.tierGroupId ?? null,
+      })
+      .select("id")
+      .single();
+    if (quoteError || !quote) {
+      console.error("quote insert failed:", quoteError);
+      return null;
+    }
+    const { error: linesError } = await supabase
+      .from("quote_line_items")
+      .insert(lines.map((l) => ({ ...l, quote_id: quote.id })));
+    if (linesError) {
+      console.error("line items insert failed:", linesError);
+      return null;
+    }
+    await supabase.from("quote_events").insert({
+      quote_id: quote.id,
+      type: "created",
+      meta: {
+        source: "dictation",
+        photo_count: images?.length ?? 0,
+        ...(input.tier
+          ? { tier: input.tier, tier_group_id: input.tierGroupId }
+          : {}),
+      },
+    });
+    return quote.id as string;
+  }
+
+  const aiInput = {
+    transcript,
+    priceBook,
+    hourlyRate: Number(contractor.hourly_rate),
+    trade: contractor.trade,
+    images,
+  };
+
+  if (body?.tiered) {
+    let draft;
+    try {
+      draft = await generateTieredQuote(aiInput);
+    } catch (err) {
+      console.error("generateTieredQuote failed:", err);
+      return NextResponse.json(
+        { error: "Quote generation failed. Try again." },
+        { status: 502 }
+      );
+    }
+    const tierGroupId = crypto.randomUUID();
+    let betterId: string | null = null;
+    for (const tier of ["good", "better", "best"] as const) {
+      const variant = draft[tier];
+      const id = await insertQuote({
+        title: draft.title,
+        jobSummary: `${draft.job_summary} ${variant.tier_summary}`.trim(),
+        assumptions: draft.assumptions,
+        questions: draft.questions_for_contractor,
+        draftLines: variant.line_items,
+        tier,
+        tierGroupId,
+      });
+      if (!id) {
+        return NextResponse.json(
+          { error: "Could not save quote." },
+          { status: 500 }
+        );
+      }
+      if (tier === "better") betterId = id;
+    }
+    return NextResponse.json({ id: betterId });
+  }
+
   let draft;
   try {
-    draft = await generateQuote({
-      transcript,
-      priceBook,
-      hourlyRate: Number(contractor.hourly_rate),
-      trade: contractor.trade,
-      images,
-    });
+    draft = await generateQuote(aiInput);
   } catch (err) {
     console.error("generateQuote failed:", err);
     return NextResponse.json(
@@ -105,68 +240,16 @@ export async function POST(request: Request) {
     );
   }
 
-  // Never trust model arithmetic — recompute all money/time on the server.
-  const validPbIds = new Set(priceBook.map((i) => i.id));
-  const lines = draft.line_items.map((li, idx) => {
-    const qty = Math.max(0, li.qty);
-    const unitPrice = Math.max(0, li.unit_price);
-    return {
-      price_book_item_id:
-        li.matched_price_book_item_id &&
-        validPbIds.has(li.matched_price_book_item_id)
-          ? li.matched_price_book_item_id
-          : null,
-      name: li.name,
-      description: li.description,
-      qty,
-      unit: li.unit,
-      unit_price: unitPrice,
-      line_total: Math.round(qty * unitPrice * 100) / 100,
-      est_minutes: Math.max(0, Math.round(li.est_minutes)),
-      ai_confidence: Math.min(1, Math.max(0, li.confidence)),
-      is_new_item: li.is_new_item || !li.matched_price_book_item_id,
-      sort_order: idx,
-    };
+  const id = await insertQuote({
+    title: draft.title,
+    jobSummary: draft.job_summary,
+    assumptions: draft.assumptions,
+    questions: draft.questions_for_contractor,
+    draftLines: draft.line_items,
   });
-
-  const subtotal = Math.round(lines.reduce((s, l) => s + l.line_total, 0) * 100) / 100;
-  const estTotalMinutes = lines.reduce((s, l) => s + l.est_minutes, 0);
-
-  const { data: quote, error: quoteError } = await supabase
-    .from("quotes")
-    .insert({
-      contractor_id: contractor.id,
-      title: draft.title,
-      job_summary: draft.job_summary,
-      dictation_transcript: transcript,
-      subtotal,
-      total: subtotal,
-      est_total_minutes: estTotalMinutes,
-      assumptions: draft.assumptions,
-      questions: draft.questions_for_contractor,
-    })
-    .select("id")
-    .single();
-
-  if (quoteError || !quote) {
-    console.error("quote insert failed:", quoteError);
+  if (!id) {
     return NextResponse.json({ error: "Could not save quote." }, { status: 500 });
   }
 
-  const { error: linesError } = await supabase
-    .from("quote_line_items")
-    .insert(lines.map((l) => ({ ...l, quote_id: quote.id })));
-
-  if (linesError) {
-    console.error("line items insert failed:", linesError);
-    return NextResponse.json({ error: "Could not save quote." }, { status: 500 });
-  }
-
-  await supabase.from("quote_events").insert({
-    quote_id: quote.id,
-    type: "created",
-    meta: { source: "dictation", photo_count: images?.length ?? 0 },
-  });
-
-  return NextResponse.json({ id: quote.id });
+  return NextResponse.json({ id });
 }

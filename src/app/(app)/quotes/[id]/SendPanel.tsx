@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import type { Quote } from "@/lib/types";
 import { sendReminder } from "./actions";
 
-export default function SendPanel({ quote }: { quote: Quote }) {
+export default function SendPanel({
+  quote,
+  shareToken,
+}: {
+  quote: Quote;
+  shareToken?: string;
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,7 +24,7 @@ export default function SendPanel({ quote }: { quote: Quote }) {
     typeof window !== "undefined"
       ? window.location.origin
       : (process.env.NEXT_PUBLIC_APP_URL ?? "")
-  }/q/${quote.share_token}`;
+  }/q/${shareToken ?? quote.share_token}`;
 
   const smsBody = encodeURIComponent(
     `Here's your quote for "${quote.title}" — view and accept it here: ${shareUrl}`

@@ -67,7 +67,16 @@ export default async function QuotesPage({
     .eq("contractor_id", contractor.id)
     .order("created_at", { ascending: false });
 
-  const quotes = (data ?? []) as QuoteRow[];
+  const allRows = (data ?? []) as QuoteRow[];
+
+  // Good/better/best groups collapse to one list entry: the accepted tier
+  // if there is one, otherwise the 'better' tier.
+  const quotes = allRows.filter((q) => {
+    if (!q.tier_group_id) return true;
+    const siblings = allRows.filter((s) => s.tier_group_id === q.tier_group_id);
+    const accepted = siblings.find((s) => s.status === "accepted");
+    return accepted ? q.id === accepted.id : q.tier === "better";
+  });
 
   const counts = new Map<Stage, number>();
   let openTotal = 0;
@@ -157,10 +166,17 @@ export default async function QuotesPage({
                       <span className="truncate font-semibold text-zinc-900">
                         {q.title}
                       </span>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${badge.className}`}
-                      >
-                        {badge.label}
+                      <span className="flex shrink-0 items-center gap-1">
+                        {q.tier_group_id && (
+                          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                            3 options
+                          </span>
+                        )}
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
                       </span>
                     </div>
                     <div className="mt-1 flex justify-between text-sm text-zinc-500">

@@ -37,10 +37,13 @@ export async function getTrialStatus(
     };
   }
 
+  // A good/better/best generation creates 3 rows but counts as ONE quote —
+  // every tier group has exactly one 'better' row.
   const { count } = await supabase
     .from("quotes")
     .select("id", { count: "exact", head: true })
-    .eq("contractor_id", contractor.id);
+    .eq("contractor_id", contractor.id)
+    .or("tier_group_id.is.null,tier.eq.better");
   const quotesUsed = count ?? 0;
   const limit = contractor.trial_quote_limit;
 

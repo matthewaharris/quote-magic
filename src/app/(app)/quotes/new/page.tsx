@@ -33,6 +33,7 @@ export default function NewQuotePage() {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [transcript, setTranscript] = useState("");
+  const [tiered, setTiered] = useState(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export default function NewQuotePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           transcript,
+          tiered,
           images: photos.map(({ media_type, data }) => ({ media_type, data })),
         }),
       });
@@ -166,17 +168,31 @@ export default function NewQuotePage() {
         </>
       )}
 
+      <label className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
+        <input
+          type="checkbox"
+          checked={tiered}
+          onChange={(e) => setTiered(e.target.checked)}
+          className="h-4 w-4 accent-amber-600"
+        />
+        Give my customer 3 options (good / better / best)
+      </label>
+
       <button
         onClick={generate}
         disabled={generating || transcript.trim().length < 10}
         className="mt-4 w-full rounded-xl bg-amber-600 px-4 py-4 text-base font-semibold text-white shadow disabled:opacity-50"
       >
-        {generating ? "Building your quote…" : "✨ Generate quote"}
+        {generating
+          ? "Building your quote…"
+          : tiered
+            ? "✨ Generate 3 options"
+            : "✨ Generate quote"}
       </button>
       {generating && (
         <p className="mt-2 text-center text-sm text-zinc-500">
           Matching your price book — this takes{" "}
-          {photos.length > 0 ? "20–40" : "~20"} seconds.
+          {tiered ? "30–60" : photos.length > 0 ? "20–40" : "~20"} seconds.
         </p>
       )}
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

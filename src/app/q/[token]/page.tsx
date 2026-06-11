@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   formatDuration,
@@ -37,6 +37,27 @@ export default async function PublicQuotePage({
     .maybeSingle();
   if (!quoteData) notFound();
   const quote = quoteData as Quote;
+
+  // Good/better/best: fetch siblings for the tier switcher. If a different
+  // tier was accepted, the lifecycle continues there — stale links self-heal.
+  let tierSiblings: Pick<Quote, "id" | "tier" | "total" | "share_token" | "status">[] = [];
+  if (quote.tier_group_id) {
+    const { data: sibData } = await supabase
+      .from("quotes")
+      .select("id, tier, total, share_token, status")
+      .eq("tier_group_id", quote.tier_group_id);
+    tierSiblings = (sibData ?? []) as typeof tierSiblings;
+    const acceptedSibling = tierSiblings.find(
+      (s) => s.status === "accepted" && s.id !== quote.id
+    );
+    if (acceptedSibling) redirect(`/q/${acceptedSibling.share_token}`);
+    const order = { good: 0, better: 1, best: 2 } as const;
+    tierSiblings.sort(
+      (a, b) => order[a.tier ?? "better"] - order[b.tier ?? "better"]
+    );
+  }
+  const showTierSwitcher =
+    tierSiblings.length > 1 && quote.status !== "accepted" && quote.status !== "declined";
 
   const [{ data: contractorData }, { data: lineData }] = await Promise.all([
     supabase
@@ -131,6 +152,35 @@ export default async function PublicQuotePage({
           <p className="mt-1 text-sm text-zinc-500">{contractor.phone}</p>
         )}
       </header>
+
+      {showTierSwitcher && (
+        <div className="print-hide mt-6 grid grid-cols-3 gap-1.5 text-center text-xs font-medium">
+          {tierSiblings.map((s) =>
+            s.id === quote.id ? (
+              <span
+                key={s.id}
+                className="rounded-xl bg-amber-600 px-2 py-2 capitalize text-white"
+              >
+                {s.tier}
+                <span className="block text-[11px] font-normal opacity-90">
+                  {formatMoney(Number(s.total))}
+                </span>
+              </span>
+            ) : (
+              <a
+                key={s.id}
+                href={`/q/${s.share_token}`}
+                className="rounded-xl bg-white px-2 py-2 capitalize text-zinc-600 ring-1 ring-zinc-200"
+              >
+                {s.tier}
+                <span className="block text-[11px] font-normal opacity-75">
+                  {formatMoney(Number(s.total))}
+                </span>
+              </a>
+            )
+          )}
+        </div>
+      )}
 
       <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
         <h2 className="text-lg font-semibold text-zinc-900">{quote.title}</h2>

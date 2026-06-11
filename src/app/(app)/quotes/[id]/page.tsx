@@ -1,13 +1,18 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
-import type {
-  ChangeOrder,
-  Invoice,
-  Job,
-  Quote,
-  QuoteLineItem,
+import {
+  formatMoney,
+  type ChangeOrder,
+  type Invoice,
+  type Job,
+  type Quote,
+  type QuoteLineItem,
+  type QuoteTier,
 } from "@/lib/types";
 import QuoteEditor from "./QuoteEditor";
+
+const TIER_ORDER: QuoteTier[] = ["good", "better", "best"];
 
 export default async function QuoteDetailPage({
   params,
@@ -50,13 +55,57 @@ export default async function QuoteDetailPage({
     changeOrders = (coData ?? []) as ChangeOrder[];
   }
 
+  const quote = quoteData as Quote;
+
+  // Good/better/best siblings: tier tabs + the share link always points at
+  // the 'better' row (the customer-side tier switcher entry point).
+  let siblings: Pick<Quote, "id" | "tier" | "total" | "share_token">[] = [];
+  if (quote.tier_group_id) {
+    const { data: sibData } = await supabase
+      .from("quotes")
+      .select("id, tier, total, share_token")
+      .eq("tier_group_id", quote.tier_group_id);
+    siblings = (sibData ?? []) as typeof siblings;
+    siblings.sort(
+      (a, b) =>
+        TIER_ORDER.indexOf(a.tier as QuoteTier) -
+        TIER_ORDER.indexOf(b.tier as QuoteTier)
+    );
+  }
+  const betterToken =
+    siblings.find((s) => s.tier === "better")?.share_token ??
+    quote.share_token;
+
   return (
-    <QuoteEditor
-      quote={quoteData as Quote}
-      initialLines={(lineData ?? []) as QuoteLineItem[]}
-      job={job}
-      invoice={invoice}
-      changeOrders={changeOrders}
-    />
+    <>
+      {siblings.length > 1 && (
+        <div className="mb-3 grid grid-cols-3 gap-1.5 text-center text-xs font-medium">
+          {siblings.map((s) => (
+            <Link
+              key={s.id}
+              href={`/quotes/${s.id}`}
+              className={`rounded-xl px-2 py-2 capitalize ${
+                s.id === quote.id
+                  ? "bg-zinc-900 text-white"
+                  : "bg-white text-zinc-600 ring-1 ring-zinc-200"
+              }`}
+            >
+              {s.tier}
+              <span className="block text-[11px] font-normal opacity-75">
+                {formatMoney(Number(s.total))}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+      <QuoteEditor
+        quote={quote}
+        initialLines={(lineData ?? []) as QuoteLineItem[]}
+        job={job}
+        invoice={invoice}
+        changeOrders={changeOrders}
+        sendShareToken={betterToken}
+      />
+    </>
   );
 }

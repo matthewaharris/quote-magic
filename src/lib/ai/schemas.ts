@@ -46,6 +46,37 @@ export const QuoteDraft = z.object({
 
 export type QuoteDraftT = z.infer<typeof QuoteDraft>;
 
+// Three-option (good/better/best) variant. Explicit keys rather than an
+// array for structured-output robustness.
+const TierVariant = z.object({
+  tier_summary: z
+    .string()
+    .describe(
+      "One sentence telling the customer what this option includes / trades off"
+    ),
+  line_items: z.array(QuoteLineItemDraft),
+});
+
+export const TieredQuoteDraft = z.object({
+  title: z.string().describe("Short job title shared by all three options"),
+  job_summary: z
+    .string()
+    .describe("2-3 sentence plain-language summary of the job for the customer"),
+  assumptions: z
+    .array(z.string())
+    .describe("Assumptions made where the dictation was ambiguous"),
+  questions_for_contractor: z
+    .array(z.string())
+    .describe("Things the contractor should confirm before sending"),
+  good: TierVariant.describe("The leanest sound version of the dictated scope"),
+  better: TierVariant.describe("The recommended version — the job as dictated"),
+  best: TierVariant.describe(
+    "Premium materials/longevity/extras that genuinely fit this job"
+  ),
+});
+
+export type TieredQuoteDraftT = z.infer<typeof TieredQuoteDraft>;
+
 // Output schema for onboarding: extract price book items from dictated past jobs.
 export const ExtractedPriceBook = z.object({
   items: z.array(

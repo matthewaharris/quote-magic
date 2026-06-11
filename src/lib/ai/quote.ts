@@ -4,8 +4,10 @@ import type { PriceBookItem } from "@/lib/types";
 import {
   ExtractedPriceBook,
   QuoteDraft,
+  TieredQuoteDraft,
   type ExtractedPriceBookT,
   type QuoteDraftT,
+  type TieredQuoteDraftT,
 } from "./schemas";
 
 const MODEL = "claude-opus-4-8";
@@ -96,6 +98,39 @@ export async function generateQuote(input: {
 
   if (!response.parsed_output) {
     throw new Error("Quote generation returned no structured output");
+  }
+  return response.parsed_output;
+}
+
+const TIER_RULES = `
+
+Produce THREE versions of this quote — good, better, best:
+- good: the leanest sound version of the dictated scope. Trim nice-to-haves, choose budget-appropriate materials, but never compromise safety or code.
+- better: the job exactly as dictated — what you would actually recommend.
+- best: premium materials, longevity upgrades, or genuinely fitting extras for THIS job. Do not pad with unrelated work.
+All three stay grounded in the dictation and price book; tiers may share identical lines where the scope doesn't vary. Each tier gets a one-sentence tier_summary the customer will read.`;
+
+export async function generateTieredQuote(input: {
+  transcript: string;
+  priceBook: PriceBookItem[];
+  hourlyRate: number;
+  trade: string;
+  images?: QuoteImage[];
+}): Promise<TieredQuoteDraftT> {
+  const response = await client.messages.parse({
+    model: MODEL,
+    // 16000 stays under the SDK's no-streaming ceiling (24000 trips
+    // "Streaming is required for operations that may take longer than 10
+    // minutes") and is ample for three compact line-item sets.
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    system: QUOTE_SYSTEM + TIER_RULES,
+    messages: [{ role: "user", content: buildQuoteContent(input) }],
+    output_config: { format: zodOutputFormat(TieredQuoteDraft) },
+  });
+
+  if (!response.parsed_output) {
+    throw new Error("Tiered quote generation returned no structured output");
   }
   return response.parsed_output;
 }

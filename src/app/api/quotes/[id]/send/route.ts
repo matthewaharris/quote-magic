@@ -44,7 +44,22 @@ export async function POST(
     if (customer) customerId = customer.id;
   }
 
-  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+  // For good/better/best groups the shared link is always the 'better' row
+  // (the customer-side tier switcher entry point), and all siblings move to
+  // 'sent' together so any tier can be accepted.
+  let shareToken = quote.share_token as string;
+  let siblingIds: string[] = [];
+  if (quote.tier_group_id) {
+    const { data: siblings } = await supabase
+      .from("quotes")
+      .select("id, tier, share_token")
+      .eq("tier_group_id", quote.tier_group_id);
+    siblingIds = (siblings ?? []).map((s) => s.id);
+    shareToken =
+      (siblings ?? []).find((s) => s.tier === "better")?.share_token ??
+      shareToken;
+  }
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${shareToken}`;
 
   let emailResult: { ok: boolean; stubbed: boolean } | null = null;
   if (body.via === "email" && body.customer_email) {
@@ -68,6 +83,8 @@ export async function POST(
   }
 
   // Only move draft -> sent forward; never regress an accepted quote.
+  // Tier groups move together.
+  const targetIds = siblingIds.length > 0 ? siblingIds : [id];
   if (quote.status === "draft") {
     await supabase
       .from("quotes")
@@ -76,9 +93,13 @@ export async function POST(
         sent_at: new Date().toISOString(),
         customer_id: customerId,
       })
-      .eq("id", id);
+      .in("id", targetIds)
+      .eq("status", "draft");
   } else if (customerId !== quote.customer_id) {
-    await supabase.from("quotes").update({ customer_id: customerId }).eq("id", id);
+    await supabase
+      .from("quotes")
+      .update({ customer_id: customerId })
+      .in("id", targetIds);
   }
 
   await supabase.from("quote_events").insert({

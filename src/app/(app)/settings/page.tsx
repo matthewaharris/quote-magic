@@ -10,6 +10,12 @@ export default async function SettingsPage() {
       <p className="mt-1 text-sm text-zinc-500">
         What customers see on your quotes and invoices.
       </p>
+      <a
+        href="/api/export/invoices.csv"
+        className="mt-4 block rounded-xl border border-zinc-300 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700"
+      >
+        ⬇️ Export invoices (CSV for QuickBooks)
+      </a>
       <SettingsForm
         initial={{
           name: contractor.name,

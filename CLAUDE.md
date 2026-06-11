@@ -54,29 +54,44 @@ dashboard (stats + comp / extend-trial / disable / re-enable, gated by
   columns the app writes via the user client, GRANT them explicitly.
   `scripts/security-check.mjs` verifies the lockdown end-to-end.
 
+Overnight batch (June 11, 2026) — ALL of the former roadmap built & verified:
+email OTP code sign-in (login page; this project's OTP is 8 digits — email
+templates need `{{ .Token }}` added in the Supabase dashboard); deposit on
+acceptance (contractors.deposit_percent, frozen into jobs at accept, demo
+PayDeposit gates scheduling — server-enforced, invoice subtracts it);
+follow-up nudges (src/lib/nudge.ts, daily Vercel cron /api/cron/nudges with
+CRON_SECRET + manual Send-reminder button, max 1 auto-nudge per quote);
+pipeline dashboard on /quotes (open/won $, stage chips via ?stage=); CSV
+invoice export (/api/export/invoices.csv); .ics calendar files
+(/api/q/[token]/calendar.ics, floating wall-clock) + print-hide CSS with
+print buttons; per-trade landing pages (/for/[trade], src/components/
+Landing.tsx); QR truck card (/settings/qr, qrcode dep); referral tracking
+(?ref= → qm_ref cookie in proxy → referred_by via admin client at
+onboarding, +10 trial quotes to trial referrers); canned demo (/demo,
+zero AI); photo capture + Claude vision (image blocks in messages.parse,
+photos NOT persisted); change orders (change_orders table, customer
+approve/decline on /q, approved sums roll into invoices); good/better/best
+(3 sibling quote rows per tier_group_id, customer tier switcher, accepting
+one declines siblings, trial counts 1 per group).
+
 ## Data model
 
 contractors, price_book_items (source: seeded|learned|manual), customers,
-quotes (status: draft→sent→viewed→accepted|declined, share_token),
-quote_line_items (price_book_item_id nullable = new/unmatched item),
-quote_events (full audit trail), jobs (created on accept; status:
-unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
-(QM-#### numbering, net-7, demo payment_ref SIM-*).
+quotes (status: draft→sent→viewed→accepted|declined, share_token,
+tier/tier_group_id for good-better-best groups), quote_line_items
+(price_book_item_id nullable = new/unmatched item), quote_events (full audit
+trail incl. deposit_paid/nudged/change_order_*), jobs (created on accept;
+status: unscheduled→scheduled→done_reported→confirmed→invoiced→paid; deposit
+fields), change_orders (pending→approved|declined), invoices (QM-####
+numbering, net-7, demo payment_ref SIM-*, deposit_applied +
+change_orders_total breakdown).
 
-## Next up (user's stated priorities, not yet built)
+## Next up
 
-1. **Mobile-code login**: email magic link stays default; consider Supabase
-   email OTP (6-digit code) as a second factor of convenience; SMS OTP needs
-   Twilio — defer.
-2. **Stripe**: real paid plans behind the trial (trial gate + `plan` column
-   already in place; trial-ended UI currently shows a mailto).
-3. **GTM backlog**: referral credits; try-it-now sandbox (demo price book,
-   no signup); per-trade landing pages/templates; QR card for the truck;
-   founding-contractor pricing.
-4. **Product backlog** (in priority order, from the approved plan): deposit
-   on acceptance; smart follow-up nudges (viewed-but-silent, Vercel cron);
-   photo capture + Claude vision line-item suggestions; change orders;
-   QuickBooks CSV export; pipeline dashboard; PDF/.ics; good/better/best.
+1. **Stripe**: real paid plans behind the trial (trial gate, `plan` column,
+   admin controls all ready; trial-ended UI currently shows a mailto).
+   Needs Matt's Stripe account + test keys in .env.local.
+2. SMS OTP (Twilio) — deferred.
 
 ## Known prototype limitations
 
@@ -88,7 +103,15 @@ unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
   og:image is often a wide banner, not a logo — re-fetch from /settings
 - Contractors created before June 2026 have `name=''` (editable in /settings)
 - Trial-ended/disabled contact is a hardcoded mailto to Matt
-- Supabase auth emails use the built-in mailer (~2-4/hr rate limit) — magic
-  links will throttle under real signup volume until custom SMTP (Resend)
-  is configured in the Supabase dashboard (Auth → SMTP). Dev workaround:
-  `scripts/login-link.mjs` mints sign-in URLs without sending email.
+- Supabase auth now uses custom SMTP via Resend (configured June 2026);
+  dev workaround for no-email login remains `scripts/login-link.mjs`
+- OTP code sign-in works but the code only appears in emails once
+  `{{ .Token }}` is added to the Supabase email templates (Matt action)
+- Nudge cron needs `CRON_SECRET` set in Vercel project env (it's in
+  .env.local; route fails closed without it)
+- Quote photos are not persisted — they only inform generation
+- /admin quote counts count 3 rows per good/better/best group (known
+  inflation; the trial counter does NOT have this problem)
+- "PDF" = print stylesheet + browser save-as-PDF, not a generated file
+- Referral reward (+10 quotes) only applies to referrers on trial; comp/paid
+  referrers just get the counter

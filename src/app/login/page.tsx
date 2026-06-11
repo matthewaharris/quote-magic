@@ -121,6 +121,17 @@ export default function LoginPage() {
               {loading ? "Sending…" : "Email me a sign-in link"}
             </button>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            <p className="text-center text-[11px] text-zinc-400">
+              By signing in you agree to the{" "}
+              <a href="/terms" className="underline underline-offset-2">
+                Terms
+              </a>{" "}
+              and{" "}
+              <a href="/privacy" className="underline underline-offset-2">
+                Privacy Policy
+              </a>
+              .
+            </p>
           </form>
         )}
       </div>

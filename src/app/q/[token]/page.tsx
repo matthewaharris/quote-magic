@@ -454,6 +454,16 @@ export default async function PublicQuotePage({
           ⚡ Powered by QuoteMagic — send quotes like this in minutes
         </a>
       </p>
+      <p className="print-hide mt-2 text-center text-[11px] text-zinc-400">
+        © 2026 Stait AI LLC ·{" "}
+        <a href="/terms" className="underline underline-offset-2">
+          Terms
+        </a>{" "}
+        ·{" "}
+        <a href="/privacy" className="underline underline-offset-2">
+          Privacy
+        </a>
+      </p>
     </main>
   );
 }

@@ -196,9 +196,18 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
           className="mx-auto h-6 w-6 rounded-md"
         />
         <p className="mt-2">
-          © 2026 QuoteMagic ·{" "}
+          © 2026 Stait AI LLC — QuoteMagic is a product of Stait AI ·{" "}
           <Link href="/login" className="underline underline-offset-2">
             Sign in
+          </Link>
+        </p>
+        <p className="mt-1">
+          <Link href="/terms" className="underline underline-offset-2">
+            Terms
+          </Link>{" "}
+          ·{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            Privacy
           </Link>
         </p>
         <p className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-x-2 gap-y-1">

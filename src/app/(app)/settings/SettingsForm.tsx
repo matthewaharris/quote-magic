@@ -5,7 +5,7 @@ import { TRADES } from "@/lib/types";
 import { updateProfile, refreshLogo } from "./actions";
 
 const inputClass =
-  "mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-base outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200";
+  "mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-base outline-none placeholder:text-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-200";
 
 export default function SettingsForm({
   initial,

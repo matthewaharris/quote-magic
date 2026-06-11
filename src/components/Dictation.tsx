@@ -120,7 +120,7 @@ export default function Dictation({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={8}
-        className="mt-4 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+        className="mt-4 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base outline-none placeholder:text-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
       />
     </div>
   );

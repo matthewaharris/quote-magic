@@ -50,6 +50,8 @@ export default async function SettingsPage() {
           trade: contractor.trade,
           hourly_rate: Number(contractor.hourly_rate),
           deposit_percent: Number(contractor.deposit_percent),
+          default_markup_percent: Number(contractor.default_markup_percent),
+          default_tax_rate: Number(contractor.default_tax_rate),
           website_url: contractor.website_url ?? "",
           logo_url: contractor.logo_url,
         }}

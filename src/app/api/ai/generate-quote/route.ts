@@ -106,10 +106,22 @@ export async function POST(request: Request) {
     confidence: number;
     is_new_item: boolean;
   };
+  // Contractor pricing defaults: markup is baked into each line's unit
+  // price (customers never see a separate markup row); the default tax rate
+  // seeds the quote's tax field.
+  const markupFactor =
+    1 +
+    Math.min(100, Math.max(0, Number(contractor.default_markup_percent))) / 100;
+  const taxRate = Math.min(
+    25,
+    Math.max(0, Number(contractor.default_tax_rate))
+  );
+
   function computeLines(draftLines: DraftLine[]) {
     const lines = draftLines.map((li, idx) => {
       const qty = Math.max(0, li.qty);
-      const unitPrice = Math.max(0, li.unit_price);
+      const unitPrice =
+        Math.round(Math.max(0, li.unit_price) * markupFactor * 100) / 100;
       return {
         price_book_item_id:
           li.matched_price_book_item_id &&
@@ -152,7 +164,8 @@ export async function POST(request: Request) {
         job_summary: input.jobSummary,
         dictation_transcript: transcript,
         subtotal,
-        total: subtotal,
+        tax_rate: taxRate,
+        total: Math.round(subtotal * (1 + taxRate / 100) * 100) / 100,
         est_total_minutes: estTotalMinutes,
         assumptions: input.assumptions,
         questions: input.questions,

@@ -30,6 +30,8 @@ export interface Contractor {
   trial_quote_limit: number;
   is_admin: boolean;
   deposit_percent: number;
+  default_markup_percent: number;
+  default_tax_rate: number;
   referred_by: string | null;
   onboarded_at: string | null;
   created_at: string;

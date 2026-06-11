@@ -17,6 +17,8 @@ export default function SettingsForm({
     trade: string;
     hourly_rate: number;
     deposit_percent: number;
+    default_markup_percent: number;
+    default_tax_rate: number;
     website_url: string;
     logo_url: string | null;
   };
@@ -27,6 +29,10 @@ export default function SettingsForm({
   const [trade, setTrade] = useState(initial.trade);
   const [hourlyRate, setHourlyRate] = useState(initial.hourly_rate);
   const [depositPercent, setDepositPercent] = useState(initial.deposit_percent);
+  const [markupPercent, setMarkupPercent] = useState(
+    initial.default_markup_percent
+  );
+  const [taxRate, setTaxRate] = useState(initial.default_tax_rate);
   const [website, setWebsite] = useState(initial.website_url);
   const [logoUrl, setLogoUrl] = useState(initial.logo_url);
 
@@ -48,6 +54,8 @@ export default function SettingsForm({
       trade,
       hourly_rate: hourlyRate,
       deposit_percent: depositPercent,
+      default_markup_percent: markupPercent,
+      default_tax_rate: taxRate,
       website_url: website,
     });
     setSaving(false);
@@ -126,6 +134,40 @@ export default function SettingsForm({
           className={inputClass}
         />
       </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block text-sm text-zinc-600">
+          Markup (%)
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={100}
+            step={0.5}
+            value={markupPercent}
+            onChange={(e) => setMarkupPercent(Number(e.target.value))}
+            className={inputClass}
+          />
+          <span className="mt-1 block text-xs text-zinc-400">
+            Baked into every new quote&apos;s prices — customers never see it.
+          </span>
+        </label>
+        <label className="block text-sm text-zinc-600">
+          Sales tax (%)
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={25}
+            step={0.05}
+            value={taxRate}
+            onChange={(e) => setTaxRate(Number(e.target.value))}
+            className={inputClass}
+          />
+          <span className="mt-1 block text-xs text-zinc-400">
+            Default tax on new quotes; editable per quote.
+          </span>
+        </label>
+      </div>
       <label className="block text-sm text-zinc-600">
         Deposit on acceptance (%)
         <input

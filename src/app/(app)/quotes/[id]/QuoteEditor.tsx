@@ -96,6 +96,23 @@ export default function QuoteEditor({
     setDirty(true);
   }
 
+  // One-shot whole-quote markup: scales every line's unit price. Baked into
+  // the prices the customer sees — there is no separate markup row.
+  const [markupInput, setMarkupInput] = useState("");
+  function applyMarkup() {
+    const pct = Number(markupInput);
+    if (!pct || pct <= -100) return;
+    const factor = 1 + pct / 100;
+    setLines((prev) =>
+      prev.map((l) => ({
+        ...l,
+        unit_price: Math.round((l.unit_price || 0) * factor * 100) / 100,
+      }))
+    );
+    setMarkupInput("");
+    setDirty(true);
+  }
+
   function save() {
     startSaving(async () => {
       const result = await saveQuote(quote.id, {
@@ -286,6 +303,28 @@ export default function QuoteEditor({
         <div className="flex justify-between text-sm text-zinc-600">
           <span>Subtotal</span>
           <span>{formatMoney(subtotal)}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between text-sm text-zinc-600">
+          <span>
+            Markup all prices{" "}
+            <input
+              type="number"
+              inputMode="decimal"
+              value={markupInput}
+              onChange={(e) => setMarkupInput(e.target.value)}
+              placeholder="0"
+              className="w-14 rounded border border-zinc-300 px-1 py-0.5 text-right text-xs placeholder:text-zinc-400"
+            />
+            %
+          </span>
+          <button
+            type="button"
+            onClick={applyMarkup}
+            disabled={!Number(markupInput)}
+            className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 disabled:opacity-40"
+          >
+            Apply
+          </button>
         </div>
         <div className="mt-1 flex items-center justify-between text-sm text-zinc-600">
           <span>

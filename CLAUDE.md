@@ -86,12 +86,20 @@ fields), change_orders (pending→approved|declined), invoices (QM-####
 numbering, net-7, demo payment_ref SIM-*, deposit_applied +
 change_orders_total breakdown).
 
+Markup & tax (June 11, 2026): contractors set `default_markup_percent`
+(baked into line unit prices at generation — customers never see a markup
+row) and `default_tax_rate` (seeds each quote's tax field) in /settings;
+the quote editor has a one-shot "Markup all prices %" control and the
+existing per-quote Tax % field.
+
 ## Next up
 
 1. **Stripe**: real paid plans behind the trial (trial gate, `plan` column,
    admin controls all ready; trial-ended UI currently shows a mailto).
    Needs Matt's Stripe account + test keys in .env.local.
-2. SMS OTP (Twilio) — deferred.
+2. **Zip-code sales tax lookup**: auto-fill `default_tax_rate` (and/or
+   per-quote rate) from the job's zip code — needs a tax-rate API choice.
+3. SMS OTP (Twilio) — deferred.
 
 ## Known prototype limitations
 

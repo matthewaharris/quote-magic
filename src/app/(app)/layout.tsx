@@ -15,7 +15,16 @@ export default async function AppLayout({
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-zinc-50">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
-        <Link href="/quotes" className="text-lg font-bold tracking-tight">
+        <Link
+          href="/quotes"
+          className="flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/quotemagic-icon.png"
+            alt=""
+            className="h-7 w-7 rounded-md"
+          />
           Quote<span className="text-amber-600">Magic</span>
         </Link>
         <div className="flex items-center gap-3">

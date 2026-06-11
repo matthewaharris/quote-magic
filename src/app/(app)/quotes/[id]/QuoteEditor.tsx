@@ -50,6 +50,12 @@ export default function QuoteEditor({
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
+  // Hours on the booking calendar; blank = auto from labor hours.
+  const [durationHours, setDurationHours] = useState(
+    quote.duration_override_minutes
+      ? String(quote.duration_override_minutes / 60)
+      : ""
+  );
   const [lines, setLines] = useState<Line[]>(() => toEditable(initialLines));
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -118,6 +124,9 @@ export default function QuoteEditor({
       const result = await saveQuote(quote.id, {
         title,
         tax_rate: taxRate,
+        duration_override_minutes: Number(durationHours)
+          ? Math.round(Number(durationHours) * 60)
+          : null,
         lines: lines.map(({ _key, _savedToPb, ...l }) => l),
       });
       setMessage(result.ok ? "Saved." : (result.message ?? "Save failed"));
@@ -350,6 +359,32 @@ export default function QuoteEditor({
         <p className="mt-1 text-right text-xs text-zinc-400">
           Est. labor: {formatDuration(totalMinutes)}
         </p>
+        <div className="mt-2 flex items-center justify-between border-t border-zinc-100 pt-2 text-sm text-zinc-600">
+          <span>
+            Time on calendar{" "}
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0.5}
+              step={0.5}
+              value={durationHours}
+              onChange={(e) => {
+                setDurationHours(e.target.value);
+                setDirty(true);
+              }}
+              placeholder={String(
+                Math.max(1, Math.ceil((totalMinutes || 60) / 60))
+              )}
+              className="w-14 rounded border border-zinc-300 px-1 py-0.5 text-right text-xs placeholder:text-zinc-400"
+            />{" "}
+            hrs
+          </span>
+          <span className="text-xs text-zinc-400">
+            {Number(durationHours)
+              ? "custom — add buffer/drive time here"
+              : "auto from labor hours"}
+          </span>
+        </div>
       </div>
 
       <div className="sticky bottom-20 mt-4">

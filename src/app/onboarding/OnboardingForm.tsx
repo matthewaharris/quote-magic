@@ -28,7 +28,9 @@ export default function OnboardingForm() {
       setBusy(false);
       return;
     }
-    router.push("/quotes");
+    // Land on the calendar first so new contractors set working hours and
+    // block out existing commitments before their first quote goes out.
+    router.push("/schedule?welcome=1");
   }
 
   return (

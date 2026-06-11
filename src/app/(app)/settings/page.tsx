@@ -33,6 +33,12 @@ export default async function SettingsPage() {
           📇 QR truck card
         </a>
         <a
+          href="/schedule"
+          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
+        >
+          📅 Working hours & blocked time
+        </a>
+        <a
           href="/settings/ai"
           className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
         >

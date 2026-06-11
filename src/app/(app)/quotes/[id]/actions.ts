@@ -131,7 +131,12 @@ export async function addChangeOrder(
 // Replaces the quote's line items and recomputes totals server-side.
 export async function saveQuote(
   quoteId: string,
-  input: { title: string; tax_rate: number; lines: EditableLine[] }
+  input: {
+    title: string;
+    tax_rate: number;
+    duration_override_minutes: number | null;
+    lines: EditableLine[];
+  }
 ) {
   const { supabase, contractor } = await requireContractor();
 
@@ -170,6 +175,13 @@ export async function saveQuote(
   const total = Math.round(subtotal * (1 + taxRate / 100) * 100) / 100;
   const estTotalMinutes = lines.reduce((s, l) => s + l.est_minutes, 0);
 
+  // Scheduling slot length: null falls back to the labor-hours estimate.
+  const rawOverride = Number(input.duration_override_minutes);
+  const durationOverride =
+    input.duration_override_minutes === null || !rawOverride
+      ? null
+      : Math.min(1440, Math.max(30, Math.round(rawOverride)));
+
   const { error: delError } = await supabase
     .from("quote_line_items")
     .delete()
@@ -189,6 +201,7 @@ export async function saveQuote(
       subtotal,
       total,
       est_total_minutes: estTotalMinutes,
+      duration_override_minutes: durationOverride,
     })
     .eq("id", quoteId);
   if (updError) return { ok: false, message: updError.message };

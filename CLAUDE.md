@@ -84,7 +84,8 @@ trail incl. deposit_paid/nudged/change_order_*), jobs (created on accept;
 status: unscheduled→scheduled→done_reported→confirmed→invoiced→paid; deposit
 fields), change_orders (pending→approved|declined), invoices (QM-####
 numbering, net-7, demo payment_ref SIM-*, deposit_applied +
-change_orders_total breakdown).
+change_orders_total breakdown), busy_blocks (contractor-entered calendar
+blocks; quote_events also has 'rescheduled' with previous_start meta).
 
 Markup & tax (June 11, 2026): contractors set `default_markup_percent`
 (baked into line unit prices at generation — customers never see a markup
@@ -120,26 +121,42 @@ alongside TRIAL_LIMIT. Admin upgrades shipped too: tier-group count fix
 link generator (production-safe /api/admin/login, verifyOtp; dev twin
 still 404s in prod).
 
+Availability scheduling (June 11, 2026) — BUILT & VERIFIED (migration 0009):
+contractor working hours drive the customer booking calendar. `contractors.
+availability` jsonb (per-day {start,end} keyed "0"–"6", missing = closed,
+default Mon–Fri 8–17; column granted per 0004 pattern), `busy_blocks` table
+(pre-existing appointments, RLS "own"), `quotes.duration_override_minutes`
+(slot length override; null = labor hours rounded up, capped at longest
+open day). `src/lib/scheduling.ts` rewritten: generateSlots honors per-day
+windows, hourly starts from open; days shorter than the job offer nothing.
+`src/lib/busy.ts` merges booked jobs + busy blocks for both /api/q routes.
+/schedule page (bottom nav + settings link): weekly-hours editor, busy-block
+add/remove, merged upcoming agenda; onboarding now lands on
+/schedule?welcome=1. Quote editor "Time on calendar" field = the override.
+Customers reschedule self-serve from /q (collapsed link under the scheduled
+card, only before the appointment starts) — direct rebooking since every
+offered slot is genuinely open; logs 'rescheduled' event with previous_start
+and emails the contractor.
+
 ## Next up
 
-1. **Stripe go-live (Matt)**: paste test `STRIPE_SECRET_KEY` into
-   .env.local → run `node --env-file=.env.local scripts/stripe-setup.mjs`
-   (idempotent: creates Solo/Pro products+prices, portal config; prints
-   STRIPE_PRICE_SOLO/PRO + STRIPE_PORTAL_CONFIG_ID) → test checkout with
-   card 4242 4242 4242 4242 (works without webhooks thanks to
-   sync-on-success; for renewals/cancels run
-   `stripe listen --forward-to localhost:3000/api/stripe/webhook` →
-   whsec into STRIPE_WEBHOOK_SECRET). Prod: same 5 env vars in Vercel,
+1. **Stripe prod go-live (Matt)**: test mode VERIFIED this session (active
+   Solo sub, sync-on-success works; keys/prices/portal already in
+   .env.local). Remaining: live keys + the same 5 env vars in Vercel,
    `scripts/stripe-setup.mjs --prod` creates the live webhook endpoint;
    Stripe dashboard: enable "cancel subscription after retries fail".
-2. **Zip-code sales tax lookup**: auto-fill `default_tax_rate` (and/or
-   per-quote rate) from the job's zip code — needs a tax-rate API choice.
+2. **Zip-code sales tax lookup** (backlogged June 11 by Matt): auto-fill
+   `default_tax_rate` (and/or per-quote rate) from the job's zip code —
+   needs a tax-rate API choice (API Ninjas free tier vs static dataset vs
+   Zip-Tax were the candidates).
 3. SMS OTP (Twilio) — deferred.
 
 ## Known prototype limitations
 
 - Resend: domain verified, can email anyone; deliverability reputation still warming
-- Business hours hardcoded Mon–Fri 8–17 in `src/lib/scheduling.ts`
+- Availability: busy blocks are single-day, non-recurring; slot starts are
+  hourly from each day's open time; customer can reschedule self-serve any
+  number of times up until the appointment starts (no notice window)
 - Demo checkout only (clearly labeled); no real payments
 - Single shared DB between dev and prod
 - Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
@@ -147,11 +164,11 @@ still 404s in prod).
 - Contractors created before June 2026 have `name=''` (editable in /settings)
 - Disabled-account contact is a hardcoded mailto to Matt (trial-ended now
   links to /settings/billing)
-- Stripe not yet configured: keys in .env.local are REPLACE_ME stubs;
-  billing UI shows a graceful "not configured" note until then. Paid quota
-  resets rely on webhooks updating billing_period_start (invoice.paid);
-  if webhooks lapse, the period start goes stale (sync-on-success covers
-  checkout but not renewals)
+- Stripe: test keys configured & verified locally (June 11); production
+  still needs live keys in Vercel. Paid quota resets rely on webhooks
+  updating billing_period_start (invoice.paid); if webhooks lapse, the
+  period start goes stale (sync-on-success covers checkout but not
+  renewals). Local webhook secret is from `stripe listen` (per-session)
 - /admin Stripe customer links point at live-mode dashboard URLs (test-mode
   customers need /test/ inserted manually)
 - Supabase auth now uses custom SMTP via Resend (configured June 2026);

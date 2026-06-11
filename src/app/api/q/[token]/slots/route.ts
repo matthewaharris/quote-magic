@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { generateSlots, jobDurationMinutes } from "@/lib/scheduling";
+import {
+  generateSlots,
+  jobDurationMinutes,
+  parseAvailability,
+} from "@/lib/scheduling";
+import { fetchBusyIntervals } from "@/lib/busy";
 
 // Available appointment slots for an accepted quote's job.
 export async function GET(
@@ -12,7 +17,7 @@ export async function GET(
 
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, contractor_id, est_total_minutes")
+    .select("id, contractor_id, est_total_minutes, duration_override_minutes")
     .eq("share_token", token)
     .maybeSingle();
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -24,21 +29,21 @@ export async function GET(
     .maybeSingle();
   if (!job) return NextResponse.json({ error: "No job" }, { status: 404 });
 
-  // Other booked jobs for this contractor block the calendar.
-  const { data: booked } = await supabase
-    .from("jobs")
-    .select("scheduled_start, scheduled_end")
-    .eq("contractor_id", quote.contractor_id)
-    .neq("id", job.id)
-    .not("scheduled_start", "is", null);
+  const { data: contractor } = await supabase
+    .from("contractors")
+    .select("availability")
+    .eq("id", quote.contractor_id)
+    .single();
+  const availability = parseAvailability(contractor?.availability);
 
-  const busy = (booked ?? []).map((b) => ({
-    start: new Date(b.scheduled_start as string),
-    end: new Date(b.scheduled_end as string),
-  }));
+  // Other booked jobs and busy blocks block the calendar. This job's own
+  // current slot is excluded so rescheduling can move around it.
+  const busy = await fetchBusyIntervals(supabase, quote.contractor_id, job.id);
 
-  const durationMinutes = jobDurationMinutes(quote.est_total_minutes);
-  const days = generateSlots({ durationMinutes, busy });
+  const durationMinutes =
+    quote.duration_override_minutes ??
+    jobDurationMinutes(quote.est_total_minutes, availability);
+  const days = generateSlots({ durationMinutes, busy, availability });
 
   return NextResponse.json({ durationMinutes, days });
 }

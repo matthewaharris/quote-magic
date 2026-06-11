@@ -11,7 +11,13 @@ interface DaySlots {
   slots: string[];
 }
 
-export default function ScheduleCalendar({ token }: { token: string }) {
+export default function ScheduleCalendar({
+  token,
+  reschedule = false,
+}: {
+  token: string;
+  reschedule?: boolean;
+}) {
   const router = useRouter();
   const [days, setDays] = useState<DaySlots[] | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(0);
@@ -68,7 +74,9 @@ export default function ScheduleCalendar({ token }: { token: string }) {
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-zinc-200">
-      <h3 className="font-semibold text-zinc-900">Pick a time for the work</h3>
+      <h3 className="font-semibold text-zinc-900">
+        {reschedule ? "Pick a new time" : "Pick a time for the work"}
+      </h3>
       <p className="mt-0.5 text-sm text-zinc-500">
         This job takes about {formatDuration(durationMinutes)}.
       </p>
@@ -123,9 +131,11 @@ export default function ScheduleCalendar({ token }: { token: string }) {
         className="mt-4 w-full rounded-2xl bg-emerald-600 py-3.5 font-bold text-white disabled:opacity-40"
       >
         {booking
-          ? "Booking…"
+          ? reschedule
+            ? "Moving…"
+            : "Booking…"
           : selected
-            ? `Book ${day.label}, ${formatSlotTime(selected)}`
+            ? `${reschedule ? "Move to" : "Book"} ${day.label}, ${formatSlotTime(selected)}`
             : "Select a time"}
       </button>
       {error && <p className="mt-2 text-center text-sm text-red-600">{error}</p>}

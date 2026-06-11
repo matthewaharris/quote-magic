@@ -5,9 +5,13 @@ import {
   formatSlotRange,
   generateSlots,
   jobDurationMinutes,
+  parseAvailability,
 } from "@/lib/scheduling";
+import { fetchBusyIntervals } from "@/lib/busy";
 
-// Customer books a slot for an accepted quote.
+// Customer books a slot for an accepted quote — or moves an existing
+// booking to a new slot (every offered slot is open on the contractor's
+// calendar, so a reschedule books directly and notifies them).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -23,20 +27,33 @@ export async function POST(
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, contractor_id, title, est_total_minutes")
+    .select(
+      "id, contractor_id, title, est_total_minutes, duration_override_minutes"
+    )
     .eq("share_token", token)
     .maybeSingle();
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, status, deposit_amount, deposit_paid_at")
+    .select(
+      "id, status, scheduled_start, scheduled_end, deposit_amount, deposit_paid_at"
+    )
     .eq("quote_id", quote.id)
     .maybeSingle();
   if (!job) return NextResponse.json({ error: "No job" }, { status: 404 });
   if (job.status !== "unscheduled" && job.status !== "scheduled") {
     return NextResponse.json(
       { error: "This job can no longer be scheduled." },
+      { status: 409 }
+    );
+  }
+  const isReschedule = job.status === "scheduled" && !!job.scheduled_start;
+  // Once the appointment has started, moving it is a conversation with the
+  // contractor, not a self-serve rebooking.
+  if (isReschedule && new Date(job.scheduled_start!) <= new Date()) {
+    return NextResponse.json(
+      { error: "This appointment has already started — contact your contractor to make changes." },
       { status: 409 }
     );
   }
@@ -48,21 +65,21 @@ export async function POST(
     );
   }
 
-  // Re-validate the requested slot against current availability.
-  const { data: booked } = await supabase
-    .from("jobs")
-    .select("scheduled_start, scheduled_end")
-    .eq("contractor_id", quote.contractor_id)
-    .neq("id", job.id)
-    .not("scheduled_start", "is", null);
-  const busy = (booked ?? []).map((b) => ({
-    start: new Date(b.scheduled_start as string),
-    end: new Date(b.scheduled_end as string),
-  }));
+  const { data: contractorData } = await supabase
+    .from("contractors")
+    .select("email, business_name, availability")
+    .eq("id", quote.contractor_id)
+    .single();
+  const availability = parseAvailability(contractorData?.availability);
 
-  const durationMinutes = jobDurationMinutes(quote.est_total_minutes);
-  const valid = generateSlots({ durationMinutes, busy }).some((d) =>
-    d.slots.includes(body.start!)
+  // Re-validate the requested slot against current availability.
+  const busy = await fetchBusyIntervals(supabase, quote.contractor_id, job.id);
+
+  const durationMinutes =
+    quote.duration_override_minutes ??
+    jobDurationMinutes(quote.est_total_minutes, availability);
+  const valid = generateSlots({ durationMinutes, busy, availability }).some(
+    (d) => d.slots.includes(body.start!)
   );
   if (!valid) {
     return NextResponse.json(
@@ -84,25 +101,39 @@ export async function POST(
     .eq("id", job.id);
   await supabase.from("quote_events").insert({
     quote_id: quote.id,
-    type: "scheduled",
-    meta: { start: start.toISOString(), end: end.toISOString() },
+    type: isReschedule ? "rescheduled" : "scheduled",
+    meta: {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      ...(isReschedule ? { previous_start: job.scheduled_start } : {}),
+    },
   });
 
-  const { data: contractor } = await supabase
-    .from("contractors")
-    .select("email, business_name")
-    .eq("id", quote.contractor_id)
-    .single();
-  if (contractor?.email) {
+  if (contractorData?.email) {
     const when = formatSlotRange(start.toISOString(), end.toISOString());
-    await sendEmail({
-      to: contractor.email,
-      subject: `📅 Job booked: ${quote.title} — ${when}`,
-      html: actionEmailHtml({
-        heading: "Job booked",
-        body: `The customer scheduled "<strong>${quote.title}</strong>" for <strong>${when}</strong>.`,
-      }),
-    });
+    if (isReschedule) {
+      const wasWhen = formatSlotRange(
+        job.scheduled_start!,
+        job.scheduled_end ?? job.scheduled_start!
+      );
+      await sendEmail({
+        to: contractorData.email,
+        subject: `🔁 Job rescheduled: ${quote.title} — now ${when}`,
+        html: actionEmailHtml({
+          heading: "Job rescheduled",
+          body: `The customer moved "<strong>${quote.title}</strong>" from <strong>${wasWhen}</strong> to <strong>${when}</strong>.`,
+        }),
+      });
+    } else {
+      await sendEmail({
+        to: contractorData.email,
+        subject: `📅 Job booked: ${quote.title} — ${when}`,
+        html: actionEmailHtml({
+          heading: "Job booked",
+          body: `The customer scheduled "<strong>${quote.title}</strong>" for <strong>${when}</strong>.`,
+        }),
+      });
+    }
   }
 
   return NextResponse.json({

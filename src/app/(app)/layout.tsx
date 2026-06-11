@@ -116,7 +116,7 @@ export default async function AppLayout({
       <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
 
       <nav className="print-hide fixed inset-x-0 bottom-0 z-10 mx-auto w-full max-w-lg border-t border-zinc-200 bg-white">
-        <div className="grid grid-cols-3 text-center text-xs font-medium text-zinc-600">
+        <div className="grid grid-cols-4 text-center text-xs font-medium text-zinc-600">
           <Link href="/quotes" className="py-3 hover:text-zinc-900">
             <div className="text-lg leading-none">📋</div>
             Quotes
@@ -124,6 +124,10 @@ export default async function AppLayout({
           <Link href="/quotes/new" className="py-3 hover:text-zinc-900">
             <div className="text-lg leading-none">🎙️</div>
             New Quote
+          </Link>
+          <Link href="/schedule" className="py-3 hover:text-zinc-900">
+            <div className="text-lg leading-none">📅</div>
+            Schedule
           </Link>
           <Link href="/pricebook" className="py-3 hover:text-zinc-900">
             <div className="text-lg leading-none">💲</div>

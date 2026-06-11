@@ -15,6 +15,7 @@ import PrintButton from "@/components/PrintButton";
 import ChangeOrderRespond from "./ChangeOrderRespond";
 import RespondButtons from "./RespondButtons";
 import ScheduleCalendar from "./ScheduleCalendar";
+import RescheduleSection from "./RescheduleSection";
 import ConfirmComplete from "./ConfirmComplete";
 import PayInvoice from "./PayInvoice";
 import PayDeposit from "./PayDeposit";
@@ -352,6 +353,11 @@ export default async function PublicQuotePage({
             >
               📅 Add to calendar
             </a>
+            {new Date(job.scheduled_start) > new Date() && (
+              <div className="print-hide">
+                <RescheduleSection token={token} />
+              </div>
+            )}
           </div>
         )}
 

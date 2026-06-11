@@ -38,6 +38,7 @@ export interface Contractor {
   default_markup_percent: number;
   default_tax_rate: number;
   quoting_instructions: string | null;
+  availability: Record<string, { start: string; end: string } | null>;
   referred_by: string | null;
   onboarded_at: string | null;
   created_at: string;
@@ -83,6 +84,7 @@ export interface Quote {
   tax_rate: number;
   total: number;
   est_total_minutes: number;
+  duration_override_minutes: number | null;
   assumptions: string[];
   questions: string[];
   sent_at: string | null;
@@ -126,6 +128,17 @@ export interface Job {
   deposit_ref: string | null;
   done_reported_at: string | null;
   confirmed_at: string | null;
+  created_at: string;
+}
+
+// A pre-existing appointment or personal commitment that blocks the
+// contractor's calendar alongside booked jobs.
+export interface BusyBlock {
+  id: string;
+  contractor_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
   created_at: string;
 }
 
@@ -196,6 +209,7 @@ export interface QuoteEvent {
     | "declined"
     | "edited"
     | "scheduled"
+    | "rescheduled"
     | "done_reported"
     | "confirmed"
     | "invoiced"

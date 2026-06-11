@@ -177,6 +177,10 @@ export async function markJobComplete(jobId: string) {
           body: `${contractor.business_name || "Your contractor"} reports "<strong>${quote.title}</strong>" is finished. Take a look and confirm so we can send your invoice.`,
           url,
           cta: "Review & confirm",
+          brand: {
+            businessName: contractor.business_name,
+            logoUrl: contractor.logo_url,
+          },
         }),
       });
       emailed = true;

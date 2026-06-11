@@ -30,15 +30,31 @@ export async function sendEmail(input: {
   return { ok: true, stubbed: false };
 }
 
+// Small logo block shared by the branded templates.
+function logoImg(logoUrl: string | null | undefined) {
+  return logoUrl
+    ? `<img src="${logoUrl}" alt="" style="max-height:48px;max-width:160px;margin-bottom:12px;display:block">`
+    : "";
+}
+
 // Generic notification template: heading, body, optional CTA button.
+// Pass `brand` only on customer-facing sends — contractor notifications
+// stay unbranded.
 export function actionEmailHtml(input: {
   heading: string;
   body: string;
   url?: string;
   cta?: string;
+  brand?: { businessName?: string | null; logoUrl?: string | null };
 }) {
   return `
   <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+    ${logoImg(input.brand?.logoUrl)}
+    ${
+      input.brand?.businessName
+        ? `<p style="margin:0 0 12px;font-size:13px;color:#888">${input.brand.businessName}</p>`
+        : ""
+    }
     <h2 style="margin:0 0 8px">${input.heading}</h2>
     <p style="margin:0;color:#555">${input.body}</p>
     ${
@@ -55,9 +71,11 @@ export function quoteEmailHtml(input: {
   title: string;
   total: string;
   url: string;
+  logoUrl?: string | null;
 }) {
   return `
   <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+    ${logoImg(input.logoUrl)}
     <h2 style="margin:0 0 4px">${input.businessName}</h2>
     <p style="margin:0 0 16px;color:#555">sent you a quote</p>
     <div style="border:1px solid #e4e4e7;border-radius:12px;padding:16px">

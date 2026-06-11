@@ -56,6 +56,7 @@ export async function POST(
         title: quote.title,
         total: formatMoney(Number(quote.total)),
         url,
+        logoUrl: contractor.logo_url,
       }),
     });
     if (!emailResult.ok) {

@@ -99,6 +99,14 @@ export default async function PublicQuotePage({
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-4 py-8">
       <header className="text-center">
+        {contractor.logo_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={contractor.logo_url}
+            alt={businessName}
+            className="mx-auto mb-3 h-12 max-w-40 object-contain"
+          />
+        )}
         <p className="text-xs uppercase tracking-widest text-zinc-400">
           {invoice ? "Invoice from" : "Quote from"}
         </p>

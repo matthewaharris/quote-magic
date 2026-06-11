@@ -9,6 +9,14 @@ confirms → invoice auto-issued → demo payment. **All of this is built,
 verified end-to-end, and live at https://quotemagic.app** (Vercel, auto-deploy
 on push to `main` of github.com/matthewaharris/quote-magic).
 
+Also built & verified (June 2026): minimal onboarding (name/phone/optional
+company + website-logo scrape) at `/onboarding`, redirect for un-onboarded
+users in `(app)/layout.tsx`; `/settings` (profile, trade, rate, logo
+re-fetch); `/pricebook/import` (the old dictate-past-jobs wizard, now
+optional); 14-day / 25-quote trial (`src/lib/trial.ts`, gate in
+generate-quote route, banner in app layout, `plan` column: trial|comp|paid);
+contractor logo + business name on `/q/[token]` and customer-facing emails.
+
 ## Stack & conventions
 
 - Next.js 16 App Router + TS + Tailwind v4, mobile-first, max-w-lg layouts
@@ -29,6 +37,11 @@ on push to `main` of github.com/matthewaharris/quote-magic).
 - Timezone simplification: appointment times stored as UTC wall-clock and
   always formatted with `timeZone:"UTC"` (see `src/lib/scheduling.ts` header)
 - Local + production share ONE Supabase project/database
+- Logos: scraped server-side (`src/lib/logo.ts`, og:image → apple-touch-icon
+  → favicon, SSRF/size/type guards, never throws) into the public `logos`
+  storage bucket; rendered with plain `<img>` (works in emails too)
+- Trial logic lives in `src/lib/trial.ts` (`getTrialStatus`); every quote row
+  counts toward the 25; `plan='comp'` bypasses (Matt's account is comp)
 
 ## Data model
 
@@ -41,22 +54,17 @@ unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
 
 ## Next up (user's stated priorities, not yet built)
 
-1. **Frictionless onboarding rework**: only email, phone, name, optional
-   company name + logo. Logo: ask for their website URL and scrape the logo
-   (og:image / apple-touch-icon / favicon fallback) — simple fetch+parse,
-   no agent needed. Logo + business name must render on quotes & invoices.
-2. **Mobile-code login**: email magic link stays default; consider Supabase
+1. **Mobile-code login**: email magic link stays default; consider Supabase
    email OTP (6-digit code) as a second factor of convenience; SMS OTP needs
    Twilio — defer.
-3. **Trial/monetization**: 14-day free trial with 25 quotes for new users —
-   trial fields on contractors, gate quote generation, show remaining-quote
-   counter. Stripe later.
-4. **GTM backlog**: "Powered by QuoteMagic" footer on customer pages should
+2. **Stripe**: real paid plans behind the trial (trial gate + `plan` column
+   already in place; trial-ended UI currently shows a mailto).
+3. **GTM backlog**: "Powered by QuoteMagic" footer on customer pages should
    link to a signup landing page (every quote sent is a viral impression to
    a homeowner AND every tradesperson knows other tradespeople); referral
    credits; try-it-now sandbox (demo price book, no signup); per-trade
    landing pages/templates; QR card for the truck; founding-contractor pricing.
-5. **Product backlog** (in priority order, from the approved plan): deposit
+4. **Product backlog** (in priority order, from the approved plan): deposit
    on acceptance; smart follow-up nudges (viewed-but-silent, Vercel cron);
    photo capture + Claude vision line-item suggestions; change orders;
    QuickBooks CSV export; pipeline dashboard; PDF/.ics; good/better/best.
@@ -67,3 +75,7 @@ unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
 - Business hours hardcoded Mon–Fri 8–17 in `src/lib/scheduling.ts`
 - Demo checkout only (clearly labeled); no real payments
 - Single shared DB between dev and prod
+- Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
+  og:image is often a wide banner, not a logo — re-fetch from /settings
+- Contractors created before June 2026 have `name=''` (editable in /settings)
+- Trial-ended contact is a hardcoded mailto to Matt (layout + new-quote page)

@@ -276,7 +276,12 @@ export default async function PublicQuotePage({
       </section>
 
       <p className="mt-8 text-center text-xs text-zinc-400">
-        Powered by QuoteMagic
+        <a
+          href="/?utm_source=quote_footer"
+          className="underline decoration-zinc-300 underline-offset-2 hover:text-zinc-600"
+        >
+          ⚡ Powered by QuoteMagic — send quotes like this in minutes
+        </a>
       </p>
     </main>
   );

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getContractor } from "@/lib/contractor";
-import { generateQuote } from "@/lib/ai/quote";
+import { generateQuote, type QuoteImage } from "@/lib/ai/quote";
 import { getTrialStatus } from "@/lib/trial";
 import type { PriceBookItem } from "@/lib/types";
 
@@ -33,13 +33,53 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     transcript?: string;
+    images?: { media_type?: string; data?: string }[];
   } | null;
   const transcript = body?.transcript?.trim();
   if (!transcript || transcript.length < 10) {
     return NextResponse.json(
-      { error: "Please describe the job first." },
+      { error: "Please describe the job too — photos support your description." },
       { status: 400 }
     );
+  }
+
+  // Optional job-site photos: validated hard — they go straight to the model.
+  const ALLOWED_MEDIA = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  const MAX_IMAGE_B64 = 1_400_000; // ~1 MB binary each
+  const MAX_TOTAL_B64 = 4_700_000; // ~3.5 MB binary total
+  let images: QuoteImage[] | undefined;
+  if (body?.images?.length) {
+    if (!Array.isArray(body.images) || body.images.length > 4) {
+      return NextResponse.json(
+        { error: "Up to 4 photos per quote." },
+        { status: 400 }
+      );
+    }
+    let total = 0;
+    images = [];
+    for (const img of body.images) {
+      if (
+        !img?.data ||
+        typeof img.data !== "string" ||
+        !ALLOWED_MEDIA.includes(img.media_type ?? "")
+      ) {
+        return NextResponse.json(
+          { error: "Couldn't read one of the photos." },
+          { status: 400 }
+        );
+      }
+      total += img.data.length;
+      if (img.data.length > MAX_IMAGE_B64 || total > MAX_TOTAL_B64) {
+        return NextResponse.json(
+          { error: "Photos too large — try fewer or smaller photos." },
+          { status: 413 }
+        );
+      }
+      images.push({
+        media_type: img.media_type as QuoteImage["media_type"],
+        data: img.data,
+      });
+    }
   }
 
   const { data: pbData } = await supabase
@@ -55,6 +95,7 @@ export async function POST(request: Request) {
       priceBook,
       hourlyRate: Number(contractor.hourly_rate),
       trade: contractor.trade,
+      images,
     });
   } catch (err) {
     console.error("generateQuote failed:", err);
@@ -121,9 +162,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save quote." }, { status: 500 });
   }
 
-  await supabase
-    .from("quote_events")
-    .insert({ quote_id: quote.id, type: "created", meta: { source: "dictation" } });
+  await supabase.from("quote_events").insert({
+    quote_id: quote.id,
+    type: "created",
+    meta: { source: "dictation", photo_count: images?.length ?? 0 },
+  });
 
   return NextResponse.json({ id: quote.id });
 }

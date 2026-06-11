@@ -27,14 +27,22 @@ Build the quote:
 - Do not invent work that was not mentioned. Permits/inspection only if dictated or clearly legally required and present in the price book.
 - est_minutes on each line is the TOTAL minutes for that line (per-unit minutes x qty).
 - Keep names and descriptions customer-friendly: no jargon the homeowner will not understand.
-- List assumptions for anything ambiguous, and questions_for_contractor for things worth confirming before sending.`;
+- List assumptions for anything ambiguous, and questions_for_contractor for things worth confirming before sending.
 
-export async function generateQuote(input: {
+The contractor may attach job-site photos. Treat them as supporting evidence: identify visible scope, materials, quantities, and site conditions (panel space, wire runs, access difficulty) that refine the line items. Stay grounded — do not invent work that is neither visible in the photos nor dictated. When a photo contradicts the dictation, trust the dictation and note the discrepancy in assumptions.`;
+
+export type QuoteImage = {
+  media_type: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  data: string; // base64, no data: prefix
+};
+
+function buildQuoteContent(input: {
   transcript: string;
   priceBook: PriceBookItem[];
   hourlyRate: number;
   trade: string;
-}): Promise<QuoteDraftT> {
+  images?: QuoteImage[];
+}) {
   const priceBookForPrompt = input.priceBook
     .map((i) => ({
       id: i.id,
@@ -47,25 +55,42 @@ export async function generateQuote(input: {
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
 
+  const text = [
+    `Trade: ${input.trade || "general contractor"}`,
+    `Hourly labor rate: $${input.hourlyRate}/hr`,
+    `Price book (JSON):`,
+    JSON.stringify(priceBookForPrompt, null, 2),
+    ``,
+    `Dictated job description:`,
+    `"""${input.transcript}"""`,
+  ].join("\n");
+
+  return [
+    ...(input.images ?? []).map((img) => ({
+      type: "image" as const,
+      source: {
+        type: "base64" as const,
+        media_type: img.media_type,
+        data: img.data,
+      },
+    })),
+    { type: "text" as const, text },
+  ];
+}
+
+export async function generateQuote(input: {
+  transcript: string;
+  priceBook: PriceBookItem[];
+  hourlyRate: number;
+  trade: string;
+  images?: QuoteImage[];
+}): Promise<QuoteDraftT> {
   const response = await client.messages.parse({
     model: MODEL,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: QUOTE_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: [
-          `Trade: ${input.trade || "general contractor"}`,
-          `Hourly labor rate: $${input.hourlyRate}/hr`,
-          `Price book (JSON):`,
-          JSON.stringify(priceBookForPrompt, null, 2),
-          ``,
-          `Dictated job description:`,
-          `"""${input.transcript}"""`,
-        ].join("\n"),
-      },
-    ],
+    messages: [{ role: "user", content: buildQuoteContent(input) }],
     output_config: { format: zodOutputFormat(QuoteDraft) },
   });
 

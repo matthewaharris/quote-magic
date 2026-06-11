@@ -1,15 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Dictation from "@/components/Dictation";
 
+type Photo = { media_type: "image/jpeg"; data: string; preview: string };
+
+const MAX_PHOTOS = 4;
+const MAX_EDGE = 1568;
+
+// Downscale on-device so payloads stay small and HEIC becomes JPEG.
+async function fileToPhoto(file: File): Promise<Photo | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+    return {
+      media_type: "image/jpeg",
+      data: dataUrl.split(",")[1],
+      preview: dataUrl,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function NewQuotePage() {
   const router = useRouter();
+  const fileInput = useRef<HTMLInputElement>(null);
   const [transcript, setTranscript] = useState("");
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trialEnded, setTrialEnded] = useState(false);
+
+  async function addPhotos(files: FileList | null) {
+    if (!files) return;
+    setError(null);
+    const room = MAX_PHOTOS - photos.length;
+    const next: Photo[] = [];
+    for (const file of [...files].slice(0, room)) {
+      const photo = await fileToPhoto(file);
+      if (photo) next.push(photo);
+      else setError("Couldn't read one of the photos — skipped it.");
+    }
+    setPhotos((prev) => [...prev, ...next]);
+    if (fileInput.current) fileInput.current.value = "";
+  }
 
   async function generate() {
     setGenerating(true);
@@ -18,7 +59,10 @@ export default function NewQuotePage() {
       const res = await fetch("/api/ai/generate-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({
+          transcript,
+          images: photos.map(({ media_type, data }) => ({ media_type, data })),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -73,6 +117,55 @@ export default function NewQuotePage() {
         />
       </div>
 
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={(e) => addPhotos(e.target.files)}
+      />
+      {photos.length < MAX_PHOTOS && (
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          className="mt-3 w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium text-zinc-500"
+        >
+          📷 Add photos (optional, up to {MAX_PHOTOS})
+        </button>
+      )}
+      {photos.length > 0 && (
+        <>
+          <div className="mt-3 flex gap-2">
+            {photos.map((photo, i) => (
+              <div key={i} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.preview}
+                  alt=""
+                  className="h-16 w-16 rounded-lg object-cover ring-1 ring-zinc-200"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPhotos((prev) => prev.filter((_, idx) => idx !== i))
+                  }
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-[10px] text-white"
+                  aria-label="Remove photo"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-zinc-400">
+            Photos help the AI spot site conditions; they aren&apos;t saved or
+            shown on the quote.
+          </p>
+        </>
+      )}
+
       <button
         onClick={generate}
         disabled={generating || transcript.trim().length < 10}
@@ -82,7 +175,8 @@ export default function NewQuotePage() {
       </button>
       {generating && (
         <p className="mt-2 text-center text-sm text-zinc-500">
-          Matching your price book — this takes ~20 seconds.
+          Matching your price book — this takes{" "}
+          {photos.length > 0 ? "20–40" : "~20"} seconds.
         </p>
       )}
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

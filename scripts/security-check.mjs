@@ -75,6 +75,10 @@ const locked = [
   ["trial_ends_at", { trial_ends_at: "2099-01-01T00:00:00Z" }],
   ["is_admin", { is_admin: true }],
   ["trial_quote_limit", { trial_quote_limit: 9999 }],
+  ["plan_tier", { plan_tier: "pro" }],
+  ["stripe_customer_id", { stripe_customer_id: "cus_fake" }],
+  ["stripe_subscription_id", { stripe_subscription_id: "sub_fake" }],
+  ["billing_period_start", { billing_period_start: "2099-01-01T00:00:00Z" }],
 ];
 for (const [name, patch] of locked) {
   const { error } = await anon

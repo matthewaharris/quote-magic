@@ -135,8 +135,10 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
           Try it now — no signup
         </Link>
         <p className="mt-3 text-xs text-zinc-500">
-          Free for 14 days · 25 quotes · no card · founding-contractor pricing
-          for early sign-ups
+          Free for 14 days · 25 quotes · no card ·{" "}
+          <Link href="/pricing" className="underline underline-offset-2">
+            plans from $29/mo
+          </Link>
         </p>
       </section>
 
@@ -202,6 +204,10 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
           </Link>
         </p>
         <p className="mt-1">
+          <Link href="/pricing" className="underline underline-offset-2">
+            Pricing
+          </Link>{" "}
+          ·{" "}
           <Link href="/terms" className="underline underline-offset-2">
             Terms
           </Link>{" "}

@@ -13,6 +13,7 @@ export const TRADES = [
 ] as const;
 
 export type ContractorPlan = "trial" | "comp" | "paid" | "disabled";
+export type PlanTier = "solo" | "pro";
 
 export interface Contractor {
   id: string;
@@ -26,6 +27,10 @@ export interface Contractor {
   logo_url: string | null;
   website_url: string | null;
   plan: ContractorPlan;
+  plan_tier: PlanTier | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  billing_period_start: string | null;
   trial_ends_at: string;
   trial_quote_limit: number;
   is_admin: boolean;

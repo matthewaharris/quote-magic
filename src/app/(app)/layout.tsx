@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
-import { getTrialStatus } from "@/lib/trial";
+import { getUsageStatus } from "@/lib/billing";
 
 export default async function AppLayout({
   children,
@@ -73,37 +73,43 @@ export default async function AppLayout({
     );
   }
 
-  const trial = await getTrialStatus(supabase, contractor);
+  const usage = await getUsageStatus(supabase, contractor);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-zinc-50">
       {header}
 
-      {trial.onTrial && (
+      {usage.kind === "trial" && (
         <div
           className={`print-hide border-b px-4 py-2 text-center text-xs font-medium ${
-            trial.expired
+            usage.expired
               ? "border-amber-300 bg-amber-100 text-amber-900"
               : "border-amber-200 bg-amber-50 text-amber-800"
           }`}
         >
-          {trial.expired ? (
+          {usage.expired ? (
             <>
               Free trial ended —{" "}
-              <a
-                href="mailto:mharris26@gmail.com?subject=QuoteMagic%20trial"
-                className="underline"
-              >
-                contact us
-              </a>
+              <Link href="/settings/billing" className="underline">
+                choose a plan
+              </Link>{" "}
+              to keep quoting
             </>
           ) : (
             <>
-              Free trial: {trial.quotesRemaining}{" "}
-              {trial.quotesRemaining === 1 ? "quote" : "quotes"} ·{" "}
-              {trial.daysLeft} {trial.daysLeft === 1 ? "day" : "days"} left
+              Free trial: {usage.quotesRemaining}{" "}
+              {usage.quotesRemaining === 1 ? "quote" : "quotes"} ·{" "}
+              {usage.daysLeft} {usage.daysLeft === 1 ? "day" : "days"} left
             </>
           )}
+        </div>
+      )}
+      {usage.kind === "paid" && usage.expired && (
+        <div className="print-hide border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
+          You&apos;ve used this month&apos;s quotes —{" "}
+          <Link href="/settings/billing" className="underline">
+            upgrade your plan
+          </Link>
         </div>
       )}
 

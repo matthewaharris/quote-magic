@@ -37,7 +37,7 @@ export default function NewQuotePage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trialEnded, setTrialEnded] = useState(false);
+  const [limitHit, setLimitHit] = useState<"trial" | "quota" | null>(null);
 
   async function addPhotos(files: FileList | null) {
     if (!files) return;
@@ -68,8 +68,8 @@ export default function NewQuotePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data.code === "TRIAL_LIMIT") {
-          setTrialEnded(true);
+        if (data.code === "TRIAL_LIMIT" || data.code === "QUOTA_LIMIT") {
+          setLimitHit(data.code === "QUOTA_LIMIT" ? "quota" : "trial");
           setGenerating(false);
           return;
         }
@@ -83,21 +83,24 @@ export default function NewQuotePage() {
     }
   }
 
-  if (trialEnded) {
+  if (limitHit) {
     return (
       <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5">
         <h1 className="text-lg font-bold text-amber-900">
-          Your free trial has ended
+          {limitHit === "quota"
+            ? "You've used this month's quotes"
+            : "Your free trial has ended"}
         </h1>
         <p className="mt-2 text-sm text-amber-800">
-          You&apos;ve used up your free trial. Paid plans are coming soon —
-          get in touch and we&apos;ll keep you quoting in the meantime.
+          {limitHit === "quota"
+            ? "You've hit your plan's monthly quote limit. Upgrade for more, or wait for your next billing period."
+            : "You've used up your free trial. Pick a plan and keep quoting — it takes about a minute."}
         </p>
         <a
-          href="mailto:mharris26@gmail.com?subject=QuoteMagic%20trial"
+          href="/settings/billing"
           className="mt-4 block w-full rounded-xl bg-amber-600 px-4 py-3 text-center text-base font-semibold text-white shadow"
         >
-          Contact us
+          {limitHit === "quota" ? "View plans & upgrade" : "Choose a plan"}
         </a>
       </div>
     );

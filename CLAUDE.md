@@ -99,11 +99,39 @@ wins). Prompt also gained universal estimating defaults (single-person crew,
 setup/cleanup time, consumables in unit prices). Legal: /terms + /privacy
 name Stait AI LLC (attorney-review templates); footers updated.
 
+Stripe billing (June 11, 2026) — BUILT, awaiting Matt's keys: two tiers
+(Solo $29/mo 30 quotes, Pro $59/mo 150 quotes — decided this session; no
+seat tiers, multi-user doesn't exist). `src/lib/billing.ts` = PLANS config,
+`getUsageStatus()` (supersedes getTrialStatus at call sites; paid = per-
+billing-period count, same tier-group rule), `syncStripeSubscription()` —
+the ONLY writer of subscription state: every webhook event AND the checkout
+success page re-fetch the live sub from Stripe and write derived state
+(idempotent, race-proof; never overwrites plan for comp/disabled). NOTE:
+on current Stripe API, `current_period_start/end` live on subscription
+ITEMS, not the subscription. Hosted Checkout + Customer Portal only (no
+client-side Stripe.js); portal handles tier switches/cancel/card. Migration
+0008 (columns locked per 0004 pattern, security-check extended). Routes:
+/api/stripe/webhook (constructEventAsync on raw request.text()),
+/settings/billing (sync-on-success via ?session_id), /pricing (public).
+Trial-ended mailto → /settings/billing links everywhere; QUOTA_LIMIT code
+alongside TRIAL_LIMIT. Admin upgrades shipped too: tier-group count fix
+(src/app/(app)/admin/quoteGroups.ts), ?q= search, accept-rate + 7d chips,
+/admin/[id] drilldown (quotes, events, Stripe link, accept rate), sign-in
+link generator (production-safe /api/admin/login, verifyOtp; dev twin
+still 404s in prod).
+
 ## Next up
 
-1. **Stripe**: real paid plans behind the trial (trial gate, `plan` column,
-   admin controls all ready; trial-ended UI currently shows a mailto).
-   Needs Matt's Stripe account + test keys in .env.local.
+1. **Stripe go-live (Matt)**: paste test `STRIPE_SECRET_KEY` into
+   .env.local → run `node --env-file=.env.local scripts/stripe-setup.mjs`
+   (idempotent: creates Solo/Pro products+prices, portal config; prints
+   STRIPE_PRICE_SOLO/PRO + STRIPE_PORTAL_CONFIG_ID) → test checkout with
+   card 4242 4242 4242 4242 (works without webhooks thanks to
+   sync-on-success; for renewals/cancels run
+   `stripe listen --forward-to localhost:3000/api/stripe/webhook` →
+   whsec into STRIPE_WEBHOOK_SECRET). Prod: same 5 env vars in Vercel,
+   `scripts/stripe-setup.mjs --prod` creates the live webhook endpoint;
+   Stripe dashboard: enable "cancel subscription after retries fail".
 2. **Zip-code sales tax lookup**: auto-fill `default_tax_rate` (and/or
    per-quote rate) from the job's zip code — needs a tax-rate API choice.
 3. SMS OTP (Twilio) — deferred.
@@ -117,7 +145,15 @@ name Stait AI LLC (attorney-review templates); footers updated.
 - Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
   og:image is often a wide banner, not a logo — re-fetch from /settings
 - Contractors created before June 2026 have `name=''` (editable in /settings)
-- Trial-ended/disabled contact is a hardcoded mailto to Matt
+- Disabled-account contact is a hardcoded mailto to Matt (trial-ended now
+  links to /settings/billing)
+- Stripe not yet configured: keys in .env.local are REPLACE_ME stubs;
+  billing UI shows a graceful "not configured" note until then. Paid quota
+  resets rely on webhooks updating billing_period_start (invoice.paid);
+  if webhooks lapse, the period start goes stale (sync-on-success covers
+  checkout but not renewals)
+- /admin Stripe customer links point at live-mode dashboard URLs (test-mode
+  customers need /test/ inserted manually)
 - Supabase auth now uses custom SMTP via Resend (configured June 2026);
   dev workaround for no-email login remains `scripts/login-link.mjs`
 - OTP code sign-in works but the code only appears in emails once
@@ -125,8 +161,6 @@ name Stait AI LLC (attorney-review templates); footers updated.
 - Nudge cron needs `CRON_SECRET` set in Vercel project env (it's in
   .env.local; route fails closed without it)
 - Quote photos are not persisted — they only inform generation
-- /admin quote counts count 3 rows per good/better/best group (known
-  inflation; the trial counter does NOT have this problem)
 - "PDF" = print stylesheet + browser save-as-PDF, not a generated file
 - Referral reward (+10 quotes) only applies to referrers on trial; comp/paid
   referrers just get the counter

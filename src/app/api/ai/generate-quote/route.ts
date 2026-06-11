@@ -5,7 +5,7 @@ import {
   generateTieredQuote,
   type QuoteImage,
 } from "@/lib/ai/quote";
-import { getTrialStatus } from "@/lib/trial";
+import { getUsageStatus } from "@/lib/billing";
 import type { PriceBookItem } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -22,15 +22,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const trial = await getTrialStatus(supabase, contractor);
-  if (trial.expired) {
+  const usage = await getUsageStatus(supabase, contractor);
+  if (usage.expired) {
     return NextResponse.json(
-      {
-        error: "Your free trial has ended.",
-        code: "TRIAL_LIMIT",
-        quotesUsed: trial.quotesUsed,
-        daysLeft: trial.daysLeft,
-      },
+      usage.kind === "paid"
+        ? {
+            error: "You've used all of this month's quotes.",
+            code: "QUOTA_LIMIT",
+            quotesUsed: usage.quotesUsed,
+            tier: usage.tier,
+          }
+        : {
+            error: "Your free trial has ended.",
+            code: "TRIAL_LIMIT",
+            quotesUsed: usage.quotesUsed,
+            daysLeft: usage.daysLeft,
+          },
       { status: 403 }
     );
   }

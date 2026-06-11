@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin";
 import type { Contractor, ContractorPlan } from "@/lib/types";
 import {
@@ -6,6 +7,7 @@ import {
   extendTrial,
   reenableContractor,
 } from "./actions";
+import { groupQuotes, type QuoteRow } from "./quoteGroups";
 
 const planBadge: Record<ContractorPlan, { label: string; className: string }> =
   {
@@ -27,28 +29,42 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const { contractor: me, admin } = await requireAdmin();
+  const { q } = await searchParams;
 
   const [{ data: contractorsData }, { data: quotesData }] = await Promise.all([
     admin
       .from("contractors")
       .select("*")
       .order("created_at", { ascending: true }),
-    admin.from("quotes").select("contractor_id, created_at"),
+    admin
+      .from("quotes")
+      .select("id, contractor_id, created_at, status, tier_group_id"),
   ]);
   const contractors = (contractorsData ?? []) as Contractor[];
-  const quotes = (quotesData ?? []) as {
-    contractor_id: string;
-    created_at: string;
-  }[];
+  const groups = groupQuotes((quotesData ?? []) as QuoteRow[]);
 
-  const usage = new Map<string, { count: number; lastAt: string | null }>();
-  for (const q of quotes) {
-    const u = usage.get(q.contractor_id) ?? { count: 0, lastAt: null };
+  const usage = new Map<
+    string,
+    { count: number; lastAt: string | null; accepted: number; sent: number }
+  >();
+  for (const g of groups) {
+    const u = usage.get(g.contractorId) ?? {
+      count: 0,
+      lastAt: null,
+      accepted: 0,
+      sent: 0,
+    };
     u.count += 1;
-    if (!u.lastAt || q.created_at > u.lastAt) u.lastAt = q.created_at;
-    usage.set(q.contractor_id, u);
+    if (!u.lastAt || g.createdAt > u.lastAt) u.lastAt = g.createdAt;
+    if (g.accepted) u.accepted += 1;
+    if (g.sent) u.sent += 1;
+    usage.set(g.contractorId, u);
   }
 
   const planCounts = contractors.reduce<Record<string, number>>((acc, c) => {
@@ -56,13 +72,38 @@ export default async function AdminPage() {
     return acc;
   }, {});
 
-  const chips: { label: string; value: number }[] = [
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const sentTotal = groups.filter((g) => g.sent).length;
+  const acceptedTotal = groups.filter((g) => g.accepted).length;
+
+  const chips: { label: string; value: string | number }[] = [
     { label: "contractors", value: contractors.length },
-    { label: "quotes all-time", value: quotes.length },
+    { label: "quotes all-time", value: groups.length },
+    {
+      label: "quotes 7d",
+      value: groups.filter((g) => g.createdAt >= weekAgo).length,
+    },
+    {
+      label: "accept rate",
+      value:
+        sentTotal > 0
+          ? `${Math.round((acceptedTotal / sentTotal) * 100)}%`
+          : "—",
+    },
     ...(["trial", "comp", "paid", "disabled"] as ContractorPlan[])
       .filter((p) => (planCounts[p] ?? 0) > 0)
       .map((p) => ({ label: p, value: planCounts[p] })),
   ];
+
+  const needle = q?.trim().toLowerCase();
+  const visible = needle
+    ? contractors.filter((c) =>
+        [c.name, c.business_name, c.email ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle)
+      )
+    : contractors;
 
   return (
     <div>
@@ -83,9 +124,30 @@ export default async function AdminPage() {
         ))}
       </div>
 
-      <ul className="mt-6 space-y-3">
-        {contractors.map((c) => {
-          const u = usage.get(c.id) ?? { count: 0, lastAt: null };
+      <form method="get" className="mt-4">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Search name, business, or email…"
+          className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+        />
+      </form>
+
+      {visible.length === 0 && (
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          No contractors match “{q}”.
+        </p>
+      )}
+
+      <ul className="mt-4 space-y-3">
+        {visible.map((c) => {
+          const u = usage.get(c.id) ?? {
+            count: 0,
+            lastAt: null,
+            accepted: 0,
+            sent: 0,
+          };
           const badge = planBadge[c.plan];
           const daysLeft = Math.max(
             0,
@@ -100,8 +162,11 @@ export default async function AdminPage() {
               className="rounded-2xl bg-white p-4 ring-1 ring-zinc-200"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-zinc-900">
-                  {c.name || c.business_name || "—"}
+                <Link
+                  href={`/admin/${c.id}`}
+                  className="font-semibold text-zinc-900 underline-offset-2 hover:underline"
+                >
+                  {c.name || c.business_name || c.email || "—"}
                   {c.name && c.business_name && (
                     <span className="font-normal text-zinc-500">
                       {" "}
@@ -111,11 +176,12 @@ export default async function AdminPage() {
                   {c.id === me.id && (
                     <span className="font-normal text-zinc-400"> (you)</span>
                   )}
-                </p>
+                </Link>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
                 >
                   {badge.label}
+                  {c.plan === "paid" && c.plan_tier ? ` · ${c.plan_tier}` : ""}
                 </span>
               </div>
               <p className="text-xs text-zinc-500">{c.email}</p>
@@ -131,6 +197,12 @@ export default async function AdminPage() {
                   </span>
                 )}
                 <span>Last active {fmtDate(u.lastAt)}</span>
+                <span>
+                  Accept rate{" "}
+                  {u.sent > 0
+                    ? `${Math.round((u.accepted / u.sent) * 100)}% (${u.accepted}/${u.sent})`
+                    : "—"}
+                </span>
                 <span>{c.onboarded_at ? "Onboarded ✓" : "Not onboarded"}</span>
                 {c.referred_by && (
                   <span className="col-span-2">
@@ -141,6 +213,9 @@ export default async function AdminPage() {
                 )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={`/admin/${c.id}`} className={actionButton}>
+                  Details
+                </Link>
                 {c.plan !== "comp" && (
                   <form action={compContractor.bind(null, c.id)}>
                     <button className={actionButton}>Comp</button>

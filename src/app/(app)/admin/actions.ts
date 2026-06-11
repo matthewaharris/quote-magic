@@ -51,6 +51,37 @@ export async function disableContractor(contractorId: string): Promise<void> {
   revalidatePath("/admin");
 }
 
+// Support tool: a single-use sign-in link for this contractor (same security
+// model as the magic-link URL in their email — the token_hash is the secret,
+// it's one-shot and expires). Returned to a client component via
+// useActionState, since plain <form action> discards return values.
+export async function generateLoginLink(
+  contractorId: string,
+  _prev: { url?: string; error?: string } | null
+): Promise<{ url?: string; error?: string }> {
+  const { admin } = await requireAdmin();
+  const { data: target } = await admin
+    .from("contractors")
+    .select("email")
+    .eq("id", contractorId)
+    .maybeSingle();
+  if (!target?.email) return { error: "No email on file for this contractor." };
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: target.email,
+  });
+  if (error || !data) {
+    return { error: error?.message ?? "Could not generate link." };
+  }
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return {
+    url: `${base}/api/admin/login?token_hash=${encodeURIComponent(
+      data.properties.hashed_token
+    )}`,
+  };
+}
+
 // Re-enable as a fresh, honest trial: 14 days and exactly 25 usable quotes
 // regardless of how many they generated before being disabled.
 export async function reenableContractor(contractorId: string): Promise<void> {

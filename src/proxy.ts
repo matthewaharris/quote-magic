@@ -47,7 +47,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip static assets and the public customer quote page.
-    "/((?!_next/static|_next/image|favicon.ico|q/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Skip static assets, the public customer quote page, and Stripe
+    // webhooks (no cookies — the session refresh would be a wasted call).
+    "/((?!_next/static|_next/image|favicon.ico|q/|api/stripe/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

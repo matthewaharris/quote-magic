@@ -29,6 +29,8 @@ export interface Contractor {
   trial_ends_at: string;
   trial_quote_limit: number;
   is_admin: boolean;
+  deposit_percent: number;
+  referred_by: string | null;
   onboarded_at: string | null;
   created_at: string;
 }
@@ -56,11 +58,15 @@ export interface Customer {
   created_at: string;
 }
 
+export type QuoteTier = "good" | "better" | "best";
+
 export interface Quote {
   id: string;
   contractor_id: string;
   customer_id: string | null;
   status: QuoteStatus;
+  tier_group_id: string | null;
+  tier: QuoteTier | null;
   title: string;
   job_summary: string | null;
   dictation_transcript: string | null;
@@ -107,9 +113,25 @@ export interface Job {
   status: JobStatus;
   scheduled_start: string | null;
   scheduled_end: string | null;
+  deposit_amount: number;
+  deposit_paid_at: string | null;
+  deposit_ref: string | null;
   done_reported_at: string | null;
   confirmed_at: string | null;
   created_at: string;
+}
+
+export interface ChangeOrder {
+  id: string;
+  quote_id: string;
+  job_id: string;
+  contractor_id: string;
+  title: string;
+  description: string | null;
+  amount: number;
+  status: "pending" | "approved" | "declined";
+  created_at: string;
+  responded_at: string | null;
 }
 
 export interface Invoice {
@@ -121,6 +143,8 @@ export interface Invoice {
   tax_rate: number;
   total: number;
   status: "due" | "paid";
+  deposit_applied: number;
+  change_orders_total: number;
   issued_at: string;
   due_at: string;
   paid_at: string | null;
@@ -167,7 +191,12 @@ export interface QuoteEvent {
     | "done_reported"
     | "confirmed"
     | "invoiced"
-    | "paid";
+    | "paid"
+    | "deposit_paid"
+    | "nudged"
+    | "change_order_added"
+    | "change_order_approved"
+    | "change_order_declined";
   meta: Record<string, unknown>;
   created_at: string;
 }

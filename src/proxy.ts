@@ -31,6 +31,17 @@ export async function proxy(request: NextRequest) {
   // random logouts (per Supabase SSR docs).
   await supabase.auth.getUser();
 
+  // Referral attribution: a ?ref=<contractor id> visit (QR card, quote
+  // footer) is remembered for 30 days and consumed at onboarding.
+  const ref = request.nextUrl.searchParams.get("ref");
+  if (ref && /^[0-9a-f-]{36}$/i.test(ref)) {
+    response.cookies.set("qm_ref", ref, {
+      maxAge: 30 * 24 * 60 * 60,
+      path: "/",
+      sameSite: "lax",
+    });
+  }
+
   return response;
 }
 

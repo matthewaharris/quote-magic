@@ -132,6 +132,13 @@ export default async function AdminPage() {
                 )}
                 <span>Last active {fmtDate(u.lastAt)}</span>
                 <span>{c.onboarded_at ? "Onboarded ✓" : "Not onboarded"}</span>
+                {c.referred_by && (
+                  <span className="col-span-2">
+                    Referred by{" "}
+                    {contractors.find((r) => r.id === c.referred_by)?.email ??
+                      "unknown"}
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {c.plan !== "comp" && (

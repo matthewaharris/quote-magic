@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireContractor } from "@/lib/contractor";
+import { getTrialStatus } from "@/lib/trial";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { contractor } = await requireContractor();
+  const { supabase, contractor } = await requireContractor();
+  const trial = await getTrialStatus(supabase, contractor);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-zinc-50">
@@ -25,6 +27,34 @@ export default async function AppLayout({
           </form>
         </div>
       </header>
+
+      {trial.onTrial && (
+        <div
+          className={`border-b px-4 py-2 text-center text-xs font-medium ${
+            trial.expired
+              ? "border-amber-300 bg-amber-100 text-amber-900"
+              : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {trial.expired ? (
+            <>
+              Free trial ended —{" "}
+              <a
+                href="mailto:mharris26@gmail.com?subject=QuoteMagic%20trial"
+                className="underline"
+              >
+                contact us
+              </a>
+            </>
+          ) : (
+            <>
+              Free trial: {trial.quotesRemaining}{" "}
+              {trial.quotesRemaining === 1 ? "quote" : "quotes"} ·{" "}
+              {trial.daysLeft} {trial.daysLeft === 1 ? "day" : "days"} left
+            </>
+          )}
+        </div>
+      )}
 
       <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
 

@@ -9,6 +9,7 @@ export default function NewQuotePage() {
   const [transcript, setTranscript] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [trialEnded, setTrialEnded] = useState(false);
 
   async function generate() {
     setGenerating(true);
@@ -20,12 +21,41 @@ export default function NewQuotePage() {
         body: JSON.stringify({ transcript }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
+      if (!res.ok) {
+        if (data.code === "TRIAL_LIMIT") {
+          setTrialEnded(true);
+          setGenerating(false);
+          return;
+        }
+        throw new Error(data.error ?? "Something went wrong");
+      }
+      router.refresh();
       router.push(`/quotes/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setGenerating(false);
     }
+  }
+
+  if (trialEnded) {
+    return (
+      <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <h1 className="text-lg font-bold text-amber-900">
+          Your free trial has ended
+        </h1>
+        <p className="mt-2 text-sm text-amber-800">
+          The free trial includes 25 quotes over 14 days, and you&apos;ve hit
+          the limit. Paid plans are coming soon — get in touch and we&apos;ll
+          keep you quoting in the meantime.
+        </p>
+        <a
+          href="mailto:mharris26@gmail.com?subject=QuoteMagic%20trial"
+          className="mt-4 block w-full rounded-xl bg-amber-600 px-4 py-3 text-center text-base font-semibold text-white shadow"
+        >
+          Contact us
+        </a>
+      </div>
+    );
   }
 
   return (

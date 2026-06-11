@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getContractor } from "@/lib/contractor";
 import { generateQuote } from "@/lib/ai/quote";
+import { getTrialStatus } from "@/lib/trial";
 import type { PriceBookItem } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -9,6 +10,19 @@ export async function POST(request: Request) {
   const ctx = await getContractor();
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { supabase, contractor } = ctx;
+
+  const trial = await getTrialStatus(supabase, contractor);
+  if (trial.expired) {
+    return NextResponse.json(
+      {
+        error: "Your free trial has ended.",
+        code: "TRIAL_LIMIT",
+        quotesUsed: trial.quotesUsed,
+        daysLeft: trial.daysLeft,
+      },
+      { status: 403 }
+    );
+  }
 
   const body = (await request.json().catch(() => null)) as {
     transcript?: string;

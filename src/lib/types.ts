@@ -1,14 +1,21 @@
 export type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "declined";
 export type PriceBookSource = "seeded" | "learned" | "manual";
 
+export type ContractorPlan = "trial" | "comp" | "paid";
+
 export interface Contractor {
   id: string;
   auth_user_id: string;
+  name: string;
   business_name: string;
   trade: string;
   phone: string | null;
   email: string | null;
   hourly_rate: number;
+  logo_url: string | null;
+  website_url: string | null;
+  plan: ContractorPlan;
+  trial_ends_at: string;
   onboarded_at: string | null;
   created_at: string;
 }

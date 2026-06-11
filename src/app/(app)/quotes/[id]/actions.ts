@@ -4,6 +4,26 @@ import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
+import { sendNudge } from "@/lib/nudge";
+
+// Manual "send reminder" — contractor's call, so the 48h/once-only cron
+// guards are skipped. Each send is still logged as a 'nudged' event.
+export async function sendReminder(quoteId: string) {
+  const { supabase, contractor } = await requireContractor();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id")
+    .eq("id", quoteId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!quote) return { ok: false, message: "Not found" };
+  const result = await sendNudge(supabase, quoteId, { force: true });
+  if (!result.ok) {
+    return { ok: false, message: `Couldn't send reminder (${result.reason}).` };
+  }
+  revalidatePath(`/quotes/${quoteId}`);
+  return { ok: true };
+}
 
 export interface EditableLine {
   id?: string;

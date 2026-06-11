@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Quote } from "@/lib/types";
+import { sendReminder } from "./actions";
 
 export default function SendPanel({ quote }: { quote: Quote }) {
   const router = useRouter();
@@ -132,6 +133,23 @@ export default function SendPanel({ quote }: { quote: Quote }) {
           Status: <span className="font-medium capitalize">{quote.status}</span>
         </p>
       )}
+      {(quote.status === "sent" || quote.status === "viewed") &&
+        quote.customer_id && (
+          <button
+            onClick={async () => {
+              setSending(true);
+              setError(null);
+              const result = await sendReminder(quote.id);
+              setSending(false);
+              if (result.ok) setNotice("Reminder sent.");
+              else setError(result.message ?? "Couldn't send reminder");
+            }}
+            disabled={sending}
+            className="mt-2 w-full rounded-xl border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 disabled:opacity-50"
+          >
+            🔔 Send reminder
+          </button>
+        )}
       {notice && <p className="mt-2 text-sm text-emerald-700">{notice}</p>}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

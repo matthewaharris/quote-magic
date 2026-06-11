@@ -10,6 +10,7 @@ import {
   type QuoteLineItem,
 } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
+import PrintButton from "@/components/PrintButton";
 import RespondButtons from "./RespondButtons";
 import ScheduleCalendar from "./ScheduleCalendar";
 import ConfirmComplete from "./ConfirmComplete";
@@ -183,6 +184,10 @@ export default async function PublicQuotePage({
         )}
       </section>
 
+      <div className="print-hide mt-4">
+        <PrintButton />
+      </div>
+
       <section className="mt-6 space-y-4">
         {quote.status === "declined" && (
           <div className="rounded-2xl bg-red-50 p-5 text-center font-semibold text-red-800 ring-1 ring-red-200">
@@ -191,7 +196,9 @@ export default async function PublicQuotePage({
         )}
 
         {quote.status !== "declined" && quote.status !== "accepted" && (
-          <RespondButtons token={token} />
+          <div className="print-hide">
+            <RespondButtons token={token} />
+          </div>
         )}
 
         {job?.status === "unscheduled" &&
@@ -202,10 +209,12 @@ export default async function PublicQuotePage({
                 {formatMoney(Number(job.deposit_amount))} deposit books your
                 spot.
               </div>
-              <PayDeposit
-                token={token}
-                amount={formatMoney(Number(job.deposit_amount))}
-              />
+              <div className="print-hide">
+                <PayDeposit
+                  token={token}
+                  amount={formatMoney(Number(job.deposit_amount))}
+                />
+              </div>
             </>
           ) : (
             <>
@@ -218,7 +227,9 @@ export default async function PublicQuotePage({
                   Ref {job.deposit_ref}
                 </p>
               )}
-              <ScheduleCalendar token={token} />
+              <div className="print-hide">
+                <ScheduleCalendar token={token} />
+              </div>
             </>
           ))}
 
@@ -233,11 +244,19 @@ export default async function PublicQuotePage({
             <p className="mt-1 text-xs text-sky-700">
               {businessName} will see you then.
             </p>
+            <a
+              href={`/api/q/${token}/calendar.ics`}
+              className="print-hide mt-3 inline-block rounded-lg border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-800"
+            >
+              📅 Add to calendar
+            </a>
           </div>
         )}
 
         {job?.status === "done_reported" && (
-          <ConfirmComplete token={token} businessName={businessName} />
+          <div className="print-hide">
+            <ConfirmComplete token={token} businessName={businessName} />
+          </div>
         )}
 
         {invoice && (
@@ -304,7 +323,12 @@ export default async function PublicQuotePage({
         )}
 
         {job?.status === "invoiced" && invoice && (
-          <PayInvoice token={token} total={formatMoney(Number(invoice.total))} />
+          <div className="print-hide">
+            <PayInvoice
+              token={token}
+              total={formatMoney(Number(invoice.total))}
+            />
+          </div>
         )}
 
         {job?.status === "paid" && (
@@ -320,7 +344,7 @@ export default async function PublicQuotePage({
         )}
       </section>
 
-      <p className="mt-8 text-center text-xs text-zinc-400">
+      <p className="print-hide mt-8 text-center text-xs text-zinc-400">
         <a
           href="/?utm_source=quote_footer"
           className="underline decoration-zinc-300 underline-offset-2 hover:text-zinc-600"

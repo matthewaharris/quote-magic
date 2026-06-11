@@ -320,7 +320,13 @@ export default function QuoteEditor({
         )}
       </div>
 
-      {job && <JobPanel job={job} invoice={invoice ?? null} />}
+      {job && (
+        <JobPanel
+          job={job}
+          invoice={invoice ?? null}
+          shareToken={quote.share_token}
+        />
+      )}
       {!job && <SendPanel quote={quote} />}
     </div>
   );

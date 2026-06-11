@@ -18,9 +18,11 @@ const stageLabels: Record<Job["status"], string> = {
 export default function JobPanel({
   job,
   invoice,
+  shareToken,
 }: {
   job: Job;
   invoice: Invoice | null;
+  shareToken: string;
 }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
@@ -52,9 +54,15 @@ export default function JobPanel({
       </div>
 
       {job.scheduled_start && job.scheduled_end && (
-        <p className="mt-3 rounded-xl bg-sky-50 p-3 text-sm font-medium text-sky-900">
+        <div className="mt-3 rounded-xl bg-sky-50 p-3 text-sm font-medium text-sky-900">
           📅 {formatSlotRange(job.scheduled_start, job.scheduled_end)}
-        </p>
+          <a
+            href={`/api/q/${shareToken}/calendar.ics`}
+            className="print-hide mt-1 block text-xs font-medium text-sky-700 underline underline-offset-2"
+          >
+            Add to calendar
+          </a>
+        </div>
       )}
 
       {Number(job.deposit_amount) > 0 && (

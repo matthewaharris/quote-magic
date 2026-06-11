@@ -10,12 +10,20 @@ export default async function SettingsPage() {
       <p className="mt-1 text-sm text-zinc-500">
         What customers see on your quotes and invoices.
       </p>
-      <a
-        href="/api/export/invoices.csv"
-        className="mt-4 block rounded-xl border border-zinc-300 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700"
-      >
-        ⬇️ Export invoices (CSV for QuickBooks)
-      </a>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <a
+          href="/api/export/invoices.csv"
+          className="block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
+        >
+          ⬇️ Invoices CSV
+        </a>
+        <a
+          href="/settings/qr"
+          className="block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
+        >
+          📇 QR truck card
+        </a>
+      </div>
       <SettingsForm
         initial={{
           name: contractor.name,

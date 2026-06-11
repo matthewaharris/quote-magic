@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import {
   formatDuration,
   formatMoney,
+  type ChangeOrder,
   type Contractor,
   type Invoice,
   type Job,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
 import PrintButton from "@/components/PrintButton";
+import ChangeOrderRespond from "./ChangeOrderRespond";
 import RespondButtons from "./RespondButtons";
 import ScheduleCalendar from "./ScheduleCalendar";
 import ConfirmComplete from "./ConfirmComplete";
@@ -84,6 +86,16 @@ export default async function PublicQuotePage({
         .single();
       job = (created as Job) ?? null;
     }
+  }
+
+  let changeOrders: ChangeOrder[] = [];
+  if (job) {
+    const { data: coData } = await supabase
+      .from("change_orders")
+      .select("*")
+      .eq("quote_id", quote.id)
+      .order("created_at");
+    changeOrders = (coData ?? []) as ChangeOrder[];
   }
 
   let invoice: Invoice | null = null;
@@ -187,6 +199,46 @@ export default async function PublicQuotePage({
       <div className="print-hide mt-4">
         <PrintButton />
       </div>
+
+      {changeOrders.length > 0 && (
+        <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            Changes to this job
+          </h2>
+          <ul className="mt-2 space-y-3">
+            {changeOrders.map((co) => (
+              <li key={co.id} className="border-b border-zinc-100 pb-3 last:border-0 last:pb-0">
+                <div className="flex justify-between gap-3">
+                  <span
+                    className={`font-medium ${co.status === "declined" ? "text-zinc-400 line-through" : "text-zinc-800"}`}
+                  >
+                    {co.title}
+                  </span>
+                  <span className="shrink-0 font-medium text-zinc-800">
+                    {formatMoney(Number(co.amount))}
+                  </span>
+                </div>
+                {co.description && (
+                  <p className="mt-0.5 text-xs text-zinc-500">{co.description}</p>
+                )}
+                {co.status === "pending" ? (
+                  !invoice && (
+                    <div className="print-hide">
+                      <ChangeOrderRespond token={token} changeOrderId={co.id} />
+                    </div>
+                  )
+                ) : (
+                  <p
+                    className={`mt-1 text-xs font-medium ${co.status === "approved" ? "text-emerald-700" : "text-zinc-400"}`}
+                  >
+                    {co.status === "approved" ? "Approved ✓" : "Declined"}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-6 space-y-4">
         {quote.status === "declined" && (

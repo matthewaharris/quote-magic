@@ -38,6 +38,96 @@ export interface EditableLine {
   is_new_item: boolean;
 }
 
+// Adds extra work to an accepted job. Customer approves/declines from the
+// quote link; approved amounts are added at invoice time. Blocked once an
+// invoice exists (that ship has sailed).
+export async function addChangeOrder(
+  quoteId: string,
+  input: { title: string; description: string; amount: number }
+) {
+  const { supabase, contractor } = await requireContractor();
+
+  const title = input.title.trim();
+  const amount = Math.round(Math.max(0, Number(input.amount) || 0) * 100) / 100;
+  if (!title) return { ok: false, message: "Give the change a name." };
+  if (amount <= 0) return { ok: false, message: "Amount must be above zero." };
+
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, title, share_token, customer_id")
+    .eq("id", quoteId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!quote) return { ok: false, message: "Quote not found" };
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("quote_id", quoteId)
+    .maybeSingle();
+  if (!job) return { ok: false, message: "No job yet — customer must accept first." };
+
+  const { data: existingInvoice } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", job.id)
+    .maybeSingle();
+  if (existingInvoice) {
+    return { ok: false, message: "Invoice already issued — no further change orders." };
+  }
+
+  const { data: co, error } = await supabase
+    .from("change_orders")
+    .insert({
+      quote_id: quoteId,
+      job_id: job.id,
+      contractor_id: contractor.id,
+      title,
+      description: input.description.trim() || null,
+      amount,
+    })
+    .select("id")
+    .single();
+  if (error || !co) return { ok: false, message: error?.message ?? "Could not save" };
+
+  await supabase.from("quote_events").insert({
+    quote_id: quoteId,
+    type: "change_order_added",
+    meta: { change_order_id: co.id, title, amount },
+  });
+
+  // Tell the customer there's something to approve.
+  let emailed = false;
+  if (quote.customer_id) {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("email")
+      .eq("id", quote.customer_id)
+      .maybeSingle();
+    if (customer?.email) {
+      const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+      await sendEmail({
+        to: customer.email,
+        subject: `Change to your job: ${title} — $${amount.toFixed(2)}`,
+        html: actionEmailHtml({
+          heading: "Change to your job",
+          body: `${contractor.business_name || "Your contractor"} proposes a change to "<strong>${quote.title}</strong>": <strong>${title}</strong> — $${amount.toFixed(2)}.${input.description.trim() ? ` ${input.description.trim()}` : ""}`,
+          url,
+          cta: "Review & approve",
+          brand: {
+            businessName: contractor.business_name,
+            logoUrl: contractor.logo_url,
+          },
+        }),
+      });
+      emailed = true;
+    }
+  }
+
+  revalidatePath(`/quotes/${quoteId}`);
+  return { ok: true, emailed };
+}
+
 // Replaces the quote's line items and recomputes totals server-side.
 export async function saveQuote(
   quoteId: string,

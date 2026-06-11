@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
-import type { Invoice, Job, Quote, QuoteLineItem } from "@/lib/types";
+import type {
+  ChangeOrder,
+  Invoice,
+  Job,
+  Quote,
+  QuoteLineItem,
+} from "@/lib/types";
 import QuoteEditor from "./QuoteEditor";
 
 export default async function QuoteDetailPage({
@@ -30,13 +36,18 @@ export default async function QuoteDetailPage({
 
   const job = (jobData as Job) ?? null;
   let invoice: Invoice | null = null;
+  let changeOrders: ChangeOrder[] = [];
   if (job) {
-    const { data: invData } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("job_id", job.id)
-      .maybeSingle();
+    const [{ data: invData }, { data: coData }] = await Promise.all([
+      supabase.from("invoices").select("*").eq("job_id", job.id).maybeSingle(),
+      supabase
+        .from("change_orders")
+        .select("*")
+        .eq("quote_id", id)
+        .order("created_at"),
+    ]);
     invoice = (invData as Invoice) ?? null;
+    changeOrders = (coData ?? []) as ChangeOrder[];
   }
 
   return (
@@ -45,6 +56,7 @@ export default async function QuoteDetailPage({
       initialLines={(lineData ?? []) as QuoteLineItem[]}
       job={job}
       invoice={invoice}
+      changeOrders={changeOrders}
     />
   );
 }

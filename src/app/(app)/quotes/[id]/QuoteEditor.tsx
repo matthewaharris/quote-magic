@@ -4,12 +4,14 @@ import { useMemo, useState, useTransition } from "react";
 import {
   formatDuration,
   formatMoney,
+  type ChangeOrder,
   type Invoice,
   type Job,
   type Quote,
   type QuoteLineItem,
 } from "@/lib/types";
 import { addLineToPriceBook, saveQuote, type EditableLine } from "./actions";
+import ChangeOrdersPanel from "./ChangeOrdersPanel";
 import JobPanel from "./JobPanel";
 import SendPanel from "./SendPanel";
 
@@ -36,11 +38,13 @@ export default function QuoteEditor({
   initialLines,
   job,
   invoice,
+  changeOrders = [],
 }: {
   quote: Quote;
   initialLines: QuoteLineItem[];
   job?: Job | null;
   invoice?: Invoice | null;
+  changeOrders?: ChangeOrder[];
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
@@ -321,11 +325,18 @@ export default function QuoteEditor({
       </div>
 
       {job && (
-        <JobPanel
-          job={job}
-          invoice={invoice ?? null}
-          shareToken={quote.share_token}
-        />
+        <>
+          <JobPanel
+            job={job}
+            invoice={invoice ?? null}
+            shareToken={quote.share_token}
+          />
+          <ChangeOrdersPanel
+            quoteId={quote.id}
+            changeOrders={changeOrders}
+            invoiced={!!invoice}
+          />
+        </>
       )}
       {!job && <SendPanel quote={quote} />}
     </div>

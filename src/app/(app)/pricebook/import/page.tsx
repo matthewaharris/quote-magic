@@ -3,47 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Dictation from "@/components/Dictation";
-import {
-  saveBusinessInfo,
-  saveSeededPriceBook,
-  type ReviewedItem,
-} from "./actions";
+import { saveImportedPriceBook, type ReviewedItem } from "./actions";
 
-type Step = "business" | "dictate" | "review";
+type Step = "dictate" | "review";
 
-export default function OnboardingPage() {
+export default function PriceBookImportPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("business");
+  const [step, setStep] = useState<Step>("dictate");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1
-  const [businessName, setBusinessName] = useState("");
-  const [trade, setTrade] = useState("electrician");
-  const [phone, setPhone] = useState("");
-  const [hourlyRate, setHourlyRate] = useState(100);
-
-  // Step 2 — one transcript per past job
+  // One transcript per past job
   const [transcripts, setTranscripts] = useState<string[]>([""]);
   const [activeJob, setActiveJob] = useState(0);
 
-  // Step 3
   const [items, setItems] = useState<ReviewedItem[]>([]);
-
-  async function submitBusiness(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    const result = await saveBusinessInfo({
-      business_name: businessName,
-      trade,
-      phone,
-      hourly_rate: hourlyRate,
-    });
-    setBusy(false);
-    if (!result.ok) setError(result.message ?? "Could not save");
-    else setStep("dictate");
-  }
 
   async function extract() {
     setBusy(true);
@@ -79,7 +53,7 @@ export default function OnboardingPage() {
   async function saveAll() {
     setBusy(true);
     setError(null);
-    const result = await saveSeededPriceBook(items);
+    const result = await saveImportedPriceBook(items);
     setBusy(false);
     if (!result.ok) setError(result.message ?? "Could not save");
     else router.push("/pricebook");
@@ -95,74 +69,18 @@ export default function OnboardingPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-zinc-900">Set up QuoteMagic</h1>
+      <h1 className="text-xl font-bold text-zinc-900">Import your prices</h1>
       <p className="mt-1 text-sm text-zinc-500">
-        {step === "business" && "Step 1 of 3 — your business"}
-        {step === "dictate" && "Step 2 of 3 — teach the AI your pricing"}
-        {step === "review" && "Step 3 of 3 — review your price book"}
+        {step === "dictate" && "Teach the AI from past jobs"}
+        {step === "review" && "Review what it extracted"}
       </p>
-
-      {step === "business" && (
-        <form onSubmit={submitBusiness} className="mt-6 space-y-3">
-          <input
-            required
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="Business name"
-            className="w-full rounded-xl border border-zinc-300 px-3 py-3"
-          />
-          <select
-            value={trade}
-            onChange={(e) => setTrade(e.target.value)}
-            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3"
-          >
-            {[
-              "electrician",
-              "plumber",
-              "handyman",
-              "landscaper",
-              "hauling",
-              "hvac",
-              "painter",
-              "general contractor",
-            ].map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Business phone (shown on quotes)"
-            className="w-full rounded-xl border border-zinc-300 px-3 py-3"
-          />
-          <label className="block text-sm text-zinc-600">
-            Hourly labor rate ($/hr)
-            <input
-              type="number"
-              inputMode="decimal"
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(Number(e.target.value))}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3"
-            />
-          </label>
-          <button
-            disabled={busy}
-            className="w-full rounded-xl bg-zinc-900 py-3.5 font-semibold text-white disabled:opacity-50"
-          >
-            Continue
-          </button>
-        </form>
-      )}
 
       {step === "dictate" && (
         <div className="mt-6">
           <p className="text-sm text-zinc-600">
             Describe 2–3 typical past jobs out loud — what the job was, what
             you did, and roughly what you charged for each part. The AI turns
-            this into your price book.
+            this into price book items.
           </p>
 
           <div className="mt-4 flex gap-2">
@@ -213,8 +131,8 @@ export default function OnboardingPage() {
             className="mt-4 w-full rounded-xl bg-amber-600 py-4 font-semibold text-white disabled:opacity-50"
           >
             {busy
-              ? "Building your price book…"
-              : `✨ Build price book from ${filledJobs} job${filledJobs === 1 ? "" : "s"}`}
+              ? "Building price book items…"
+              : `✨ Build items from ${filledJobs} job${filledJobs === 1 ? "" : "s"}`}
           </button>
         </div>
       )}
@@ -300,7 +218,7 @@ export default function OnboardingPage() {
             disabled={busy || items.length === 0}
             className="mt-4 w-full rounded-xl bg-zinc-900 py-4 font-semibold text-white disabled:opacity-50"
           >
-            {busy ? "Saving…" : `Save ${items.length} items & finish`}
+            {busy ? "Saving…" : `Save ${items.length} items`}
           </button>
         </div>
       )}

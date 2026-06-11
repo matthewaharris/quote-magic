@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
 import { getTrialStatus } from "@/lib/trial";
 
@@ -8,6 +9,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const { supabase, contractor } = await requireContractor();
+  if (!contractor.onboarded_at) redirect("/onboarding");
   const trial = await getTrialStatus(supabase, contractor);
 
   return (

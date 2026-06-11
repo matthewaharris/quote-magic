@@ -27,7 +27,7 @@ export default async function PriceBookPage() {
         <div className="mt-8 space-y-3 text-center">
           <p className="text-zinc-500">Your price book is empty.</p>
           <Link
-            href="/onboarding"
+            href="/pricebook/import"
             className="block w-full rounded-xl bg-amber-600 px-5 py-3.5 font-semibold text-white"
           >
             🎙️ Teach the AI from past jobs
@@ -44,7 +44,15 @@ export default async function PriceBookPage() {
           </form>
         </div>
       ) : (
-        <PriceBookManager items={items} />
+        <>
+          <PriceBookManager items={items} />
+          <Link
+            href="/pricebook/import"
+            className="mt-6 block text-center text-sm font-medium text-amber-700 underline"
+          >
+            🎙️ Import more from past jobs
+          </Link>
+        </>
       )}
     </div>
   );

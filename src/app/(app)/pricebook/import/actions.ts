@@ -3,25 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
 
-export async function saveBusinessInfo(input: {
-  business_name: string;
-  trade: string;
-  phone: string;
-  hourly_rate: number;
-}) {
-  const { supabase, contractor } = await requireContractor();
-  const { error } = await supabase
-    .from("contractors")
-    .update({
-      business_name: input.business_name.trim(),
-      trade: input.trade.trim(),
-      phone: input.phone.trim() || null,
-      hourly_rate: Math.max(0, Number(input.hourly_rate) || 0),
-    })
-    .eq("id", contractor.id);
-  return error ? { ok: false, message: error.message } : { ok: true };
-}
-
 export interface ReviewedItem {
   name: string;
   description: string;
@@ -31,7 +12,7 @@ export interface ReviewedItem {
   est_minutes_per_unit: number;
 }
 
-export async function saveSeededPriceBook(items: ReviewedItem[]) {
+export async function saveImportedPriceBook(items: ReviewedItem[]) {
   const { supabase, contractor } = await requireContractor();
 
   const rows = items
@@ -51,11 +32,6 @@ export async function saveSeededPriceBook(items: ReviewedItem[]) {
 
   const { error } = await supabase.from("price_book_items").insert(rows);
   if (error) return { ok: false, message: error.message };
-
-  await supabase
-    .from("contractors")
-    .update({ onboarded_at: new Date().toISOString() })
-    .eq("id", contractor.id);
 
   revalidatePath("/pricebook");
   return { ok: true };

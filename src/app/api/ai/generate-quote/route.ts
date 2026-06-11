@@ -11,6 +11,13 @@ export async function POST(request: Request) {
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { supabase, contractor } = ctx;
 
+  if (contractor.plan === "disabled") {
+    return NextResponse.json(
+      { error: "This account is disabled.", code: "ACCOUNT_DISABLED" },
+      { status: 403 }
+    );
+  }
+
   const trial = await getTrialStatus(supabase, contractor);
   if (trial.expired) {
     return NextResponse.json(

@@ -44,9 +44,8 @@ export default function NewQuotePage() {
           Your free trial has ended
         </h1>
         <p className="mt-2 text-sm text-amber-800">
-          The free trial includes 25 quotes over 14 days, and you&apos;ve hit
-          the limit. Paid plans are coming soon — get in touch and we&apos;ll
-          keep you quoting in the meantime.
+          You&apos;ve used up your free trial. Paid plans are coming soon —
+          get in touch and we&apos;ll keep you quoting in the meantime.
         </p>
         <a
           href="mailto:mharris26@gmail.com?subject=QuoteMagic%20trial"

@@ -12,7 +12,7 @@ export const TRADES = [
   "general contractor",
 ] as const;
 
-export type ContractorPlan = "trial" | "comp" | "paid";
+export type ContractorPlan = "trial" | "comp" | "paid" | "disabled";
 
 export interface Contractor {
   id: string;
@@ -27,6 +27,8 @@ export interface Contractor {
   website_url: string | null;
   plan: ContractorPlan;
   trial_ends_at: string;
+  trial_quote_limit: number;
+  is_admin: boolean;
   onboarded_at: string | null;
   created_at: string;
 }

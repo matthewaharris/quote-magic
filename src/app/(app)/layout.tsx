@@ -19,9 +19,12 @@ export default async function AppLayout({
           Quote<span className="text-amber-600">Magic</span>
         </Link>
         <div className="flex items-center gap-3">
-          <span className="max-w-40 truncate text-xs text-zinc-500">
-            {contractor.business_name || contractor.email}
-          </span>
+          <Link
+            href="/settings"
+            className="max-w-40 truncate text-xs text-zinc-500 underline-offset-2 hover:underline"
+          >
+            {contractor.business_name || contractor.name || contractor.email}
+          </Link>
           <form action="/auth/signout" method="post">
             <button className="text-xs text-zinc-400 underline">
               Sign out

@@ -1,6 +1,17 @@
 export type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "declined";
 export type PriceBookSource = "seeded" | "learned" | "manual";
 
+export const TRADES = [
+  "electrician",
+  "plumber",
+  "handyman",
+  "landscaper",
+  "hauling",
+  "hvac",
+  "painter",
+  "general contractor",
+] as const;
+
 export type ContractorPlan = "trial" | "comp" | "paid";
 
 export interface Contractor {

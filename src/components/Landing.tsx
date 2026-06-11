@@ -128,6 +128,12 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
             : "AI quoting for solo trade contractors — your prices, your price book, a customer link that closes the job."}
         </p>
         <Cta />
+        <Link
+          href="/demo"
+          className="mt-3 block text-center text-sm font-medium text-amber-700 underline underline-offset-2"
+        >
+          Try it now — no signup
+        </Link>
         <p className="mt-3 text-xs text-zinc-500">
           Free for 14 days · 25 quotes · no card · founding-contractor pricing
           for early sign-ups

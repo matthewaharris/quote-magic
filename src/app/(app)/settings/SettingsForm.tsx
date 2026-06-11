@@ -16,6 +16,7 @@ export default function SettingsForm({
     phone: string;
     trade: string;
     hourly_rate: number;
+    deposit_percent: number;
     website_url: string;
     logo_url: string | null;
   };
@@ -25,6 +26,7 @@ export default function SettingsForm({
   const [phone, setPhone] = useState(initial.phone);
   const [trade, setTrade] = useState(initial.trade);
   const [hourlyRate, setHourlyRate] = useState(initial.hourly_rate);
+  const [depositPercent, setDepositPercent] = useState(initial.deposit_percent);
   const [website, setWebsite] = useState(initial.website_url);
   const [logoUrl, setLogoUrl] = useState(initial.logo_url);
 
@@ -45,6 +47,7 @@ export default function SettingsForm({
       phone,
       trade,
       hourly_rate: hourlyRate,
+      deposit_percent: depositPercent,
       website_url: website,
     });
     setSaving(false);
@@ -122,6 +125,22 @@ export default function SettingsForm({
           onChange={(e) => setHourlyRate(Number(e.target.value))}
           className={inputClass}
         />
+      </label>
+      <label className="block text-sm text-zinc-600">
+        Deposit on acceptance (%)
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={100}
+          value={depositPercent}
+          onChange={(e) => setDepositPercent(Number(e.target.value))}
+          className={inputClass}
+        />
+        <span className="mt-1 block text-xs text-zinc-400">
+          Customers pay this up front when they accept a quote. 0 disables
+          deposits.
+        </span>
       </label>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-3">

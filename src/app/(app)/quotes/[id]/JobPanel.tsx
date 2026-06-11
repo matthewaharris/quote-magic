@@ -57,6 +57,21 @@ export default function JobPanel({
         </p>
       )}
 
+      {Number(job.deposit_amount) > 0 && (
+        <p className="mt-3 text-sm text-zinc-600">
+          Deposit {formatMoney(Number(job.deposit_amount))} —{" "}
+          {job.deposit_paid_at ? (
+            <span className="font-medium text-emerald-700">
+              paid ✓ (Ref {job.deposit_ref})
+            </span>
+          ) : (
+            <span className="font-medium text-amber-700">
+              awaiting customer
+            </span>
+          )}
+        </p>
+      )}
+
       {["unscheduled", "scheduled"].includes(job.status) && (
         <button
           onClick={() => run(() => markJobComplete(job.id))}

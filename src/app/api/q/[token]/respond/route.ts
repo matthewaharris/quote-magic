@@ -29,14 +29,28 @@ export async function POST(
     return NextResponse.json({ error: "Already responded" }, { status: 409 });
   }
 
+  const { data: contractor } = await supabase
+    .from("contractors")
+    .select("email, business_name, deposit_percent")
+    .eq("id", quote.contractor_id)
+    .single();
+
+  // Deposit is frozen at acceptance time — later changes to the
+  // contractor's deposit_percent never touch existing jobs.
+  const pct = Math.min(100, Math.max(0, Number(contractor?.deposit_percent ?? 0)));
+  const depositAmount =
+    pct > 0 ? Math.round(Number(quote.total) * pct) / 100 : 0;
+
   const newStatus = action === "accept" ? "accepted" : "declined";
   await supabase
     .from("quotes")
     .update({ status: newStatus, responded_at: new Date().toISOString() })
     .eq("id", quote.id);
-  await supabase
-    .from("quote_events")
-    .insert({ quote_id: quote.id, type: newStatus });
+  await supabase.from("quote_events").insert({
+    quote_id: quote.id,
+    type: newStatus,
+    meta: action === "accept" ? { deposit_amount: depositAmount } : {},
+  });
 
   // Acceptance opens a job — this drives scheduling and the rest of the
   // post-accept lifecycle.
@@ -44,17 +58,14 @@ export async function POST(
     await supabase
       .from("jobs")
       .upsert(
-        { quote_id: quote.id, contractor_id: quote.contractor_id },
+        {
+          quote_id: quote.id,
+          contractor_id: quote.contractor_id,
+          deposit_amount: depositAmount,
+        },
         { onConflict: "quote_id", ignoreDuplicates: true }
       );
   }
-
-  // Notify the contractor.
-  const { data: contractor } = await supabase
-    .from("contractors")
-    .select("email, business_name")
-    .eq("id", quote.contractor_id)
-    .single();
 
   if (contractor?.email) {
     await sendEmail({

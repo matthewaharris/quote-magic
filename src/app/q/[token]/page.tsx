@@ -14,6 +14,7 @@ import RespondButtons from "./RespondButtons";
 import ScheduleCalendar from "./ScheduleCalendar";
 import ConfirmComplete from "./ConfirmComplete";
 import PayInvoice from "./PayInvoice";
+import PayDeposit from "./PayDeposit";
 
 // Public customer-facing page for the full job lifecycle, keyed by
 // unguessable share token. Uses the service-role client — RLS does not
@@ -193,14 +194,33 @@ export default async function PublicQuotePage({
           <RespondButtons token={token} />
         )}
 
-        {job?.status === "unscheduled" && (
-          <>
-            <div className="rounded-2xl bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-              ✓ Quote accepted — now pick a time that works for you.
-            </div>
-            <ScheduleCalendar token={token} />
-          </>
-        )}
+        {job?.status === "unscheduled" &&
+          (Number(job.deposit_amount) > 0 && !job.deposit_paid_at ? (
+            <>
+              <div className="rounded-2xl bg-amber-50 p-4 text-center text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+                ✓ Quote accepted — a{" "}
+                {formatMoney(Number(job.deposit_amount))} deposit books your
+                spot.
+              </div>
+              <PayDeposit
+                token={token}
+                amount={formatMoney(Number(job.deposit_amount))}
+              />
+            </>
+          ) : (
+            <>
+              <div className="rounded-2xl bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                ✓ Quote accepted — now pick a time that works for you.
+              </div>
+              {job.deposit_paid_at && (
+                <p className="text-center text-xs text-zinc-500">
+                  Deposit paid ✓ {formatMoney(Number(job.deposit_amount))} ·
+                  Ref {job.deposit_ref}
+                </p>
+              )}
+              <ScheduleCalendar token={token} />
+            </>
+          ))}
 
         {job?.status === "scheduled" && job.scheduled_start && (
           <div className="rounded-2xl bg-sky-50 p-5 text-center ring-1 ring-sky-200">
@@ -243,6 +263,31 @@ export default async function PublicQuotePage({
               <span>Issued {new Date(invoice.issued_at).toLocaleDateString()}</span>
               <span>Due {new Date(invoice.due_at).toLocaleDateString()}</span>
             </div>
+            {(Number(invoice.deposit_applied) > 0 ||
+              Number(invoice.change_orders_total) > 0) && (
+              <div className="mt-2 space-y-0.5 border-t border-zinc-100 pt-2 text-sm text-zinc-500">
+                <div className="flex justify-between">
+                  <span>Quote total</span>
+                  <span>{formatMoney(Number(quote.total))}</span>
+                </div>
+                {Number(invoice.change_orders_total) > 0 && (
+                  <div className="flex justify-between">
+                    <span>+ Approved changes</span>
+                    <span>
+                      {formatMoney(Number(invoice.change_orders_total))}
+                    </span>
+                  </div>
+                )}
+                {Number(invoice.deposit_applied) > 0 && (
+                  <div className="flex justify-between">
+                    <span>− Deposit paid</span>
+                    <span>
+                      −{formatMoney(Number(invoice.deposit_applied))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-lg font-bold text-zinc-900">
               <span>Amount due</span>
               <span>

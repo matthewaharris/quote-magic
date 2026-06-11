@@ -17,6 +17,7 @@ export default async function SettingsPage() {
           phone: contractor.phone ?? "",
           trade: contractor.trade,
           hourly_rate: Number(contractor.hourly_rate),
+          deposit_percent: Number(contractor.deposit_percent),
           website_url: contractor.website_url ?? "",
           logo_url: contractor.logo_url,
         }}

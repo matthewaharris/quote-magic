@@ -30,13 +30,20 @@ export async function POST(
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, status")
+    .select("id, status, deposit_amount, deposit_paid_at")
     .eq("quote_id", quote.id)
     .maybeSingle();
   if (!job) return NextResponse.json({ error: "No job" }, { status: 404 });
   if (job.status !== "unscheduled" && job.status !== "scheduled") {
     return NextResponse.json(
       { error: "This job can no longer be scheduled." },
+      { status: 409 }
+    );
+  }
+  // The deposit gate on the customer page is UI only — enforce it here.
+  if (Number(job.deposit_amount) > 0 && !job.deposit_paid_at) {
+    return NextResponse.json(
+      { error: "Deposit required before scheduling." },
       { status: 409 }
     );
   }

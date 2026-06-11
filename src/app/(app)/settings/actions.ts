@@ -10,6 +10,7 @@ export async function updateProfile(input: {
   phone: string;
   trade: string;
   hourly_rate: number;
+  deposit_percent: number;
   website_url: string;
 }) {
   const { supabase, contractor } = await requireContractor();
@@ -21,6 +22,10 @@ export async function updateProfile(input: {
       phone: input.phone.trim() || null,
       trade: input.trade.trim(),
       hourly_rate: Math.max(0, Number(input.hourly_rate) || 0),
+      deposit_percent: Math.min(
+        100,
+        Math.max(0, Math.round(Number(input.deposit_percent) || 0))
+      ),
       website_url: input.website_url.trim() || null,
     })
     .eq("id", contractor.id);

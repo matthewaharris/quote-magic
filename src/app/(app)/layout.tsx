@@ -10,37 +10,74 @@ export default async function AppLayout({
 }) {
   const { supabase, contractor } = await requireContractor();
   if (!contractor.onboarded_at) redirect("/onboarding");
+
+  const header = (
+    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
+      <Link
+        href="/quotes"
+        className="flex items-center gap-2 text-lg font-bold tracking-tight"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/quotemagic-icon.png"
+          alt=""
+          className="h-7 w-7 rounded-md"
+        />
+        Quote<span className="text-amber-600">Magic</span>
+      </Link>
+      <div className="flex items-center gap-3">
+        {contractor.is_admin && (
+          <Link
+            href="/admin"
+            className="text-xs font-medium text-amber-700 underline-offset-2 hover:underline"
+          >
+            Admin
+          </Link>
+        )}
+        <Link
+          href="/settings"
+          className="max-w-40 truncate text-xs text-zinc-500 underline-offset-2 hover:underline"
+        >
+          {contractor.business_name || contractor.name || contractor.email}
+        </Link>
+        <form action="/auth/signout" method="post">
+          <button className="text-xs text-zinc-400 underline">
+            Sign out
+          </button>
+        </form>
+      </div>
+    </header>
+  );
+
+  if (contractor.plan === "disabled") {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-zinc-50">
+        {header}
+        <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          <p className="text-3xl">🔒</p>
+          <h1 className="mt-2 text-lg font-bold text-zinc-900">
+            Account disabled
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Contact{" "}
+            <a
+              href="mailto:mharris26@gmail.com?subject=QuoteMagic%20account"
+              className="underline"
+            >
+              support
+            </a>{" "}
+            to restore access.
+          </p>
+        </main>
+      </div>
+    );
+  }
+
   const trial = await getTrialStatus(supabase, contractor);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-zinc-50">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
-        <Link
-          href="/quotes"
-          className="flex items-center gap-2 text-lg font-bold tracking-tight"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/quotemagic-icon.png"
-            alt=""
-            className="h-7 w-7 rounded-md"
-          />
-          Quote<span className="text-amber-600">Magic</span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/settings"
-            className="max-w-40 truncate text-xs text-zinc-500 underline-offset-2 hover:underline"
-          >
-            {contractor.business_name || contractor.name || contractor.email}
-          </Link>
-          <form action="/auth/signout" method="post">
-            <button className="text-xs text-zinc-400 underline">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+      {header}
 
       {trial.onTrial && (
         <div

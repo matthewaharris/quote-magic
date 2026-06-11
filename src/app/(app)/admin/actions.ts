@@ -1,0 +1,82 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/admin";
+
+// All plan/trial changes go through the service-role client — these columns
+// are locked against user-scoped writes (migration 0004). Guard failures are
+// silent no-ops (the UI hides invalid buttons; this is defense in depth).
+
+export async function compContractor(contractorId: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  await admin
+    .from("contractors")
+    .update({ plan: "comp" })
+    .eq("id", contractorId);
+  revalidatePath("/admin");
+}
+
+export async function extendTrial(contractorId: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  const { data: target } = await admin
+    .from("contractors")
+    .select("plan, trial_ends_at, trial_quote_limit")
+    .eq("id", contractorId)
+    .maybeSingle();
+  if (!target || target.plan !== "trial") {
+    console.warn("extendTrial: target not on trial, skipping");
+    return;
+  }
+  const base = Math.max(Date.now(), new Date(target.trial_ends_at).getTime());
+  await admin
+    .from("contractors")
+    .update({
+      trial_ends_at: new Date(base + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      trial_quote_limit: target.trial_quote_limit + 25,
+    })
+    .eq("id", contractorId);
+  revalidatePath("/admin");
+}
+
+export async function disableContractor(contractorId: string): Promise<void> {
+  const { contractor: me, admin } = await requireAdmin();
+  if (contractorId === me.id) {
+    console.warn("disableContractor: refusing to disable self");
+    return;
+  }
+  await admin
+    .from("contractors")
+    .update({ plan: "disabled" })
+    .eq("id", contractorId);
+  revalidatePath("/admin");
+}
+
+// Re-enable as a fresh, honest trial: 14 days and exactly 25 usable quotes
+// regardless of how many they generated before being disabled.
+export async function reenableContractor(contractorId: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  const { data: target } = await admin
+    .from("contractors")
+    .select("plan")
+    .eq("id", contractorId)
+    .maybeSingle();
+  if (!target || target.plan !== "disabled") {
+    console.warn("reenableContractor: target not disabled, skipping");
+    return;
+  }
+  const { count } = await admin
+    .from("quotes")
+    .select("id", { count: "exact", head: true })
+    .eq("contractor_id", contractorId);
+  await admin
+    .from("contractors")
+    .update({
+      plan: "trial",
+      trial_ends_at: new Date(
+        Date.now() + 14 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      trial_quote_limit: (count ?? 0) + 25,
+    })
+    .eq("id", contractorId);
+  revalidatePath("/admin");
+}

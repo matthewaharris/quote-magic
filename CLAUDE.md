@@ -14,8 +14,12 @@ company + website-logo scrape) at `/onboarding`, redirect for un-onboarded
 users in `(app)/layout.tsx`; `/settings` (profile, trade, rate, logo
 re-fetch); `/pricebook/import` (the old dictate-past-jobs wizard, now
 optional); 14-day / 25-quote trial (`src/lib/trial.ts`, gate in
-generate-quote route, banner in app layout, `plan` column: trial|comp|paid);
-contractor logo + business name on `/q/[token]` and customer-facing emails.
+generate-quote route, banner in app layout, `plan` column:
+trial|comp|paid|disabled); contractor logo + business name on `/q/[token]`
+and customer-facing emails; public landing page at `/` (logged-out only;
+"Powered by QuoteMagic" footer on customer pages links there); `/admin`
+dashboard (stats + comp / extend-trial / disable / re-enable, gated by
+`contractors.is_admin` — both owner accounts flagged).
 
 ## Stack & conventions
 
@@ -41,7 +45,14 @@ contractor logo + business name on `/q/[token]` and customer-facing emails.
   → favicon, SSRF/size/type guards, never throws) into the public `logos`
   storage bucket; rendered with plain `<img>` (works in emails too)
 - Trial logic lives in `src/lib/trial.ts` (`getTrialStatus`); every quote row
-  counts toward the 25; `plan='comp'` bypasses (Matt's account is comp)
+  counts toward `contractors.trial_quote_limit` (default 25, admin-extendable);
+  `plan='comp'` bypasses (both of Matt's accounts are comp + is_admin)
+- SECURITY: `plan`, `trial_ends_at`, `is_admin`, `trial_quote_limit` are
+  column-locked against user-scoped writes (0004: revoke + column-scoped
+  grants — RLS limits rows, grants limit columns). All plan changes go
+  through `/admin` server actions (service role). When adding contractor
+  columns the app writes via the user client, GRANT them explicitly.
+  `scripts/security-check.mjs` verifies the lockdown end-to-end.
 
 ## Data model
 
@@ -59,11 +70,9 @@ unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
    Twilio — defer.
 2. **Stripe**: real paid plans behind the trial (trial gate + `plan` column
    already in place; trial-ended UI currently shows a mailto).
-3. **GTM backlog**: "Powered by QuoteMagic" footer on customer pages should
-   link to a signup landing page (every quote sent is a viral impression to
-   a homeowner AND every tradesperson knows other tradespeople); referral
-   credits; try-it-now sandbox (demo price book, no signup); per-trade
-   landing pages/templates; QR card for the truck; founding-contractor pricing.
+3. **GTM backlog**: referral credits; try-it-now sandbox (demo price book,
+   no signup); per-trade landing pages/templates; QR card for the truck;
+   founding-contractor pricing.
 4. **Product backlog** (in priority order, from the approved plan): deposit
    on acceptance; smart follow-up nudges (viewed-but-silent, Vercel cron);
    photo capture + Claude vision line-item suggestions; change orders;
@@ -78,4 +87,8 @@ unscheduled→scheduled→done_reported→confirmed→invoiced→paid), invoices
 - Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
   og:image is often a wide banner, not a logo — re-fetch from /settings
 - Contractors created before June 2026 have `name=''` (editable in /settings)
-- Trial-ended contact is a hardcoded mailto to Matt (layout + new-quote page)
+- Trial-ended/disabled contact is a hardcoded mailto to Matt
+- Supabase auth emails use the built-in mailer (~2-4/hr rate limit) — magic
+  links will throttle under real signup volume until custom SMTP (Resend)
+  is configured in the Supabase dashboard (Auth → SMTP). Dev workaround:
+  `scripts/login-link.mjs` mints sign-in URLs without sending email.

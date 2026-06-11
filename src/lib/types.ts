@@ -32,6 +32,7 @@ export interface Contractor {
   deposit_percent: number;
   default_markup_percent: number;
   default_tax_rate: number;
+  quoting_instructions: string | null;
   referred_by: string | null;
   onboarded_at: string | null;
   created_at: string;

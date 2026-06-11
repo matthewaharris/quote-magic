@@ -204,6 +204,7 @@ export async function POST(request: Request) {
     priceBook,
     hourlyRate: Number(contractor.hourly_rate),
     trade: contractor.trade,
+    instructions: contractor.quoting_instructions,
     images,
   };
 

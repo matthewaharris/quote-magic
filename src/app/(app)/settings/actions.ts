@@ -45,6 +45,17 @@ export async function updateProfile(input: {
   return { ok: true as const };
 }
 
+export async function saveQuotingInstructions(instructions: string) {
+  const { supabase, contractor } = await requireContractor();
+  const { error } = await supabase
+    .from("contractors")
+    .update({ quoting_instructions: instructions.trim().slice(0, 2000) || null })
+    .eq("id", contractor.id);
+  if (error) return { ok: false as const, message: error.message };
+  revalidatePath("/settings/ai");
+  return { ok: true as const };
+}
+
 // Re-scrape the logo from the given website (saving the URL first so the
 // next attempt starts from what the contractor last typed).
 export async function refreshLogo(websiteUrl: string) {

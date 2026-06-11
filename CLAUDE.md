@@ -92,6 +92,13 @@ row) and `default_tax_rate` (seeds each quote's tax field) in /settings;
 the quote editor has a one-shot "Markup all prices %" control and the
 existing per-quote Tax % field.
 
+AI transparency (June 11, 2026): /settings/ai shows the quoting system
+prompt's rules in plain English and saves `contractors.quoting_instructions`
+— freeform standing rules injected into every generation (price book still
+wins). Prompt also gained universal estimating defaults (single-person crew,
+setup/cleanup time, consumables in unit prices). Legal: /terms + /privacy
+name Stait AI LLC (attorney-review templates); footers updated.
+
 ## Next up
 
 1. **Stripe**: real paid plans behind the trial (trial gate, `plan` column,

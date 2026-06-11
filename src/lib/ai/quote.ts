@@ -28,8 +28,13 @@ Build the quote:
 - If work is mentioned that no price book item covers, still include it: set is_new_item true, matched_price_book_item_id null, and give a best-guess fair market unit price and time. These get flagged for the contractor to price.
 - Do not invent work that was not mentioned. Permits/inspection only if dictated or clearly legally required and present in the price book.
 - est_minutes on each line is the TOTAL minutes for that line (per-unit minutes x qty).
+- Assume a single-person crew unless the dictation says otherwise.
+- Labor time includes realistic setup and cleanup, not just tool-on time.
+- Typical consumables (fasteners, connectors, sealant) belong inside unit prices, not as surprise line items.
 - Keep names and descriptions customer-friendly: no jargon the homeowner will not understand.
 - List assumptions for anything ambiguous, and questions_for_contractor for things worth confirming before sending.
+
+The contractor may provide their own standing quoting instructions (minimums, standard add-ons, crew details, travel charges). Apply them — they know their business — except where they conflict with the price book's prices or the structural rules above.
 
 The contractor may attach job-site photos. Treat them as supporting evidence: identify visible scope, materials, quantities, and site conditions (panel space, wire runs, access difficulty) that refine the line items. Stay grounded — do not invent work that is neither visible in the photos nor dictated. When a photo contradicts the dictation, trust the dictation and note the discrepancy in assumptions.`;
 
@@ -43,6 +48,7 @@ function buildQuoteContent(input: {
   priceBook: PriceBookItem[];
   hourlyRate: number;
   trade: string;
+  instructions?: string | null;
   images?: QuoteImage[];
 }) {
   const priceBookForPrompt = input.priceBook
@@ -62,6 +68,13 @@ function buildQuoteContent(input: {
     `Hourly labor rate: $${input.hourlyRate}/hr`,
     `Price book (JSON):`,
     JSON.stringify(priceBookForPrompt, null, 2),
+    ...(input.instructions?.trim()
+      ? [
+          ``,
+          `Contractor's standing quoting instructions:`,
+          `"""${input.instructions.trim()}"""`,
+        ]
+      : []),
     ``,
     `Dictated job description:`,
     `"""${input.transcript}"""`,
@@ -85,6 +98,7 @@ export async function generateQuote(input: {
   priceBook: PriceBookItem[];
   hourlyRate: number;
   trade: string;
+  instructions?: string | null;
   images?: QuoteImage[];
 }): Promise<QuoteDraftT> {
   const response = await client.messages.parse({
@@ -115,6 +129,7 @@ export async function generateTieredQuote(input: {
   priceBook: PriceBookItem[];
   hourlyRate: number;
   trade: string;
+  instructions?: string | null;
   images?: QuoteImage[];
 }): Promise<TieredQuoteDraftT> {
   const response = await client.messages.parse({

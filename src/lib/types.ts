@@ -37,6 +37,7 @@ export interface Contractor {
   deposit_percent: number;
   default_markup_percent: number;
   default_tax_rate: number;
+  business_zip: string | null;
   quoting_instructions: string | null;
   payment_instructions: string | null;
   availability: Record<string, { start: string; end: string } | null>;
@@ -83,6 +84,7 @@ export interface Quote {
   share_token: string;
   subtotal: number;
   tax_rate: number;
+  job_zip: string | null;
   total: number;
   est_total_minutes: number;
   duration_override_minutes: number | null;

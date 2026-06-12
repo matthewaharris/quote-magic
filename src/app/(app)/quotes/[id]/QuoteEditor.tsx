@@ -11,6 +11,7 @@ import {
   type QuoteLineItem,
 } from "@/lib/types";
 import { addLineToPriceBook, saveQuote, type EditableLine } from "./actions";
+import { lookupTax } from "../../taxActions";
 import ChangeOrdersPanel from "./ChangeOrdersPanel";
 import JobPanel from "./JobPanel";
 import SendPanel from "./SendPanel";
@@ -50,6 +51,8 @@ export default function QuoteEditor({
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
+  const [jobZip, setJobZip] = useState(quote.job_zip ?? "");
+  const [lookingUpTax, setLookingUpTax] = useState(false);
   // Hours on the booking calendar; blank = auto from labor hours.
   const [durationHours, setDurationHours] = useState(
     quote.duration_override_minutes
@@ -124,6 +127,7 @@ export default function QuoteEditor({
       const result = await saveQuote(quote.id, {
         title,
         tax_rate: taxRate,
+        job_zip: jobZip,
         duration_override_minutes: Number(durationHours)
           ? Math.round(Number(durationHours) * 60)
           : null,
@@ -133,6 +137,22 @@ export default function QuoteEditor({
       if (result.ok) setDirty(false);
       setTimeout(() => setMessage(null), 2500);
     });
+  }
+
+  async function useLocalRate() {
+    setLookingUpTax(true);
+    const result = await lookupTax(jobZip);
+    setLookingUpTax(false);
+    if (result.ok) {
+      setTaxRate(result.rate);
+      setDirty(true);
+      setMessage(
+        `Sales tax${result.region ? ` for ${result.region}` : ""}: ${result.rate}%`
+      );
+    } else {
+      setMessage(result.message ?? "Lookup failed.");
+    }
+    setTimeout(() => setMessage(null), 3000);
   }
 
   async function saveToPriceBook(line: Line) {
@@ -351,6 +371,30 @@ export default function QuoteEditor({
             %
           </span>
           <span>{formatMoney(total - subtotal)}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between text-sm text-zinc-600">
+          <span>
+            Job zip{" "}
+            <input
+              inputMode="numeric"
+              maxLength={5}
+              value={jobZip}
+              onChange={(e) => {
+                setJobZip(e.target.value.replace(/\D/g, "").slice(0, 5));
+                setDirty(true);
+              }}
+              placeholder="—"
+              className="w-16 rounded border border-zinc-300 px-1 py-0.5 text-right text-xs placeholder:text-zinc-400"
+            />
+          </span>
+          <button
+            type="button"
+            onClick={useLocalRate}
+            disabled={lookingUpTax || !/^[0-9]{5}$/.test(jobZip)}
+            className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 disabled:opacity-40"
+          >
+            {lookingUpTax ? "Looking…" : "Use local tax rate"}
+          </button>
         </div>
         <div className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-base font-bold text-zinc-900">
           <span>Total</span>

@@ -104,6 +104,24 @@ report(
 );
 if (phoneErr) console.log(`        error: ${phoneErr.message}`);
 
+// Allowed column from 0011: business_zip must be writable.
+const { data: zipData, error: zipErr } = await anon
+  .from("contractors")
+  .update({ business_zip: "73101" })
+  .eq("auth_user_id", userId)
+  .select("business_zip");
+report(
+  "self-update of business_zip is allowed",
+  !zipErr && zipData?.length === 1 && zipData[0].business_zip === "73101"
+);
+if (zipErr) console.log(`        error: ${zipErr.message}`);
+
+// tax_rates (0011) is service-role only: user-scoped writes must be rejected.
+const { error: taxErr } = await anon
+  .from("tax_rates")
+  .insert({ zip: "00000", rate: 0 });
+report("user-scoped insert into tax_rates is blocked", !!taxErr);
+
 // Confirm locked values are untouched.
 const { data: row } = await admin
   .from("contractors")

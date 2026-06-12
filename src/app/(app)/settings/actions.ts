@@ -13,9 +13,11 @@ export async function updateProfile(input: {
   deposit_percent: number;
   default_markup_percent: number;
   default_tax_rate: number;
+  business_zip: string;
   payment_instructions: string;
   website_url: string;
 }) {
+  const zip = input.business_zip.trim();
   const { supabase, contractor } = await requireContractor();
   const { error } = await supabase
     .from("contractors")
@@ -37,6 +39,7 @@ export async function updateProfile(input: {
         25,
         Math.max(0, Number(input.default_tax_rate) || 0)
       ),
+      business_zip: /^[0-9]{5}$/.test(zip) ? zip : null,
       payment_instructions:
         input.payment_instructions.trim().slice(0, 1000) || null,
       website_url: input.website_url.trim() || null,

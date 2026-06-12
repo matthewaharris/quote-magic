@@ -33,6 +33,7 @@ Build the quote:
 - Typical consumables (fasteners, connectors, sealant) belong inside unit prices, not as surprise line items.
 - Keep names and descriptions customer-friendly: no jargon the homeowner will not understand.
 - List assumptions for anything ambiguous, and questions_for_contractor for things worth confirming before sending.
+- job_zip: capture the job site's 5-digit zip code only when one is actually spoken (alone or inside an address). City names are not enough — never guess a zip.
 
 The contractor may provide their own standing quoting instructions (minimums, standard add-ons, crew details, travel charges). Apply them — they know their business — except where they conflict with the price book's prices or the structural rules above.
 

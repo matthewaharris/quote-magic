@@ -151,6 +151,19 @@ the simulated checkout; the demo /api/q/[token]/pay* routes 403 in manual
 mode (otherwise anyone could mark a real invoice paid). Stripe Connect is
 the future third mode — branch points are documented in payments.ts.
 
+Zip-code tax lookup (June 12, 2026) — BUILT & VERIFIED (migration 0011):
+`src/lib/tax.ts` looks up a zip's combined sales tax via the zip.tax API
+(free tier 100 calls/mo) behind the shared `tax_rates` cache table (90-day
+TTL, service-role only; cache hits don't touch the quota; stale cache beats
+a failed call). Without `ZIPTAX_API_KEY` it stubs 8.25% "Stubville, OK" in
+dev and fails politely in prod. `contractors.business_zip` + /settings
+"Find my tax rate" fills the default rate; `quotes.job_zip` + quote editor
+"Use local tax rate" fills the per-quote rate; generation extracts job_zip
+from the dictation (schema field, never inferred from city names) and
+auto-applies that zip's rate over the contractor default. Lookups go
+through the auth-gated server action `src/app/(app)/taxActions.ts`.
+security-check covers the new grants.
+
 ## Next up
 
 1. **Stripe prod go-live (Matt)**: test mode VERIFIED this session (active
@@ -158,10 +171,9 @@ the future third mode — branch points are documented in payments.ts.
    .env.local). Remaining: live keys + the same 5 env vars in Vercel,
    `scripts/stripe-setup.mjs --prod` creates the live webhook endpoint;
    Stripe dashboard: enable "cancel subscription after retries fail".
-2. **Zip-code sales tax lookup** (backlogged June 11 by Matt): auto-fill
-   `default_tax_rate` (and/or per-quote rate) from the job's zip code —
-   needs a tax-rate API choice (API Ninjas free tier vs static dataset vs
-   Zip-Tax were the candidates).
+2. **ZIPTAX_API_KEY (Matt)**: sign up at zip.tax (free tier), add the key
+   to .env.local and Vercel — until then tax lookup stubs in dev and says
+   "isn't set up yet" in production.
 3. SMS OTP (Twilio) — deferred.
 
 ## Known prototype limitations
@@ -177,6 +189,9 @@ the future third mode — branch points are documented in payments.ts.
 - Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
   og:image is often a wide banner, not a logo — re-fetch from /settings
 - Contractors created before June 2026 have `name=''` (editable in /settings)
+- Tax lookup: zips don't align perfectly with tax districts — the looked-up
+  rate seeds an always-editable field, it isn't authoritative; ZIPTAX_API_KEY
+  not yet configured (dev stubs 8.25%, prod says "isn't set up yet")
 - Disabled-account contact is a hardcoded mailto to Matt (trial-ended now
   links to /settings/billing)
 - Stripe: test keys configured & verified locally (June 11); production

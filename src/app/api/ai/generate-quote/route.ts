@@ -6,6 +6,7 @@ import {
   type QuoteImage,
 } from "@/lib/ai/quote";
 import { getUsageStatus } from "@/lib/billing";
+import { isValidZip, lookupTaxRate } from "@/lib/tax";
 import type { PriceBookItem } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -119,10 +120,20 @@ export async function POST(request: Request) {
   const markupFactor =
     1 +
     Math.min(100, Math.max(0, Number(contractor.default_markup_percent))) / 100;
-  const taxRate = Math.min(
+  const defaultTaxRate = Math.min(
     25,
     Math.max(0, Number(contractor.default_tax_rate))
   );
+
+  // Per-quote tax: when the dictation includes the job site's zip, that
+  // zip's combined local rate beats the contractor-wide default. The zip is
+  // stored either way so the editor's lookup button can retry a failure.
+  async function resolveJobTax(draftZip: string | null) {
+    const zip = draftZip?.trim() ?? "";
+    if (!isValidZip(zip)) return { taxRate: defaultTaxRate, jobZip: null };
+    const looked = await lookupTaxRate(zip);
+    return { taxRate: looked.ok ? looked.rate : defaultTaxRate, jobZip: zip };
+  }
 
   function computeLines(draftLines: DraftLine[]) {
     const lines = draftLines.map((li, idx) => {
@@ -159,9 +170,12 @@ export async function POST(request: Request) {
     assumptions: string[];
     questions: string[];
     draftLines: DraftLine[];
+    taxRate: number;
+    jobZip: string | null;
     tier?: "good" | "better" | "best";
     tierGroupId?: string;
   }) {
+    const taxRate = input.taxRate;
     const { lines, subtotal, estTotalMinutes } = computeLines(input.draftLines);
     const { data: quote, error: quoteError } = await supabase
       .from("quotes")
@@ -172,6 +186,7 @@ export async function POST(request: Request) {
         dictation_transcript: transcript,
         subtotal,
         tax_rate: taxRate,
+        job_zip: input.jobZip,
         total: Math.round(subtotal * (1 + taxRate / 100) * 100) / 100,
         est_total_minutes: estTotalMinutes,
         assumptions: input.assumptions,
@@ -226,6 +241,7 @@ export async function POST(request: Request) {
         { status: 502 }
       );
     }
+    const { taxRate, jobZip } = await resolveJobTax(draft.job_zip);
     const tierGroupId = crypto.randomUUID();
     let betterId: string | null = null;
     for (const tier of ["good", "better", "best"] as const) {
@@ -236,6 +252,8 @@ export async function POST(request: Request) {
         assumptions: draft.assumptions,
         questions: draft.questions_for_contractor,
         draftLines: variant.line_items,
+        taxRate,
+        jobZip,
         tier,
         tierGroupId,
       });
@@ -261,12 +279,15 @@ export async function POST(request: Request) {
     );
   }
 
+  const { taxRate, jobZip } = await resolveJobTax(draft.job_zip);
   const id = await insertQuote({
     title: draft.title,
     jobSummary: draft.job_summary,
     assumptions: draft.assumptions,
     questions: draft.questions_for_contractor,
     draftLines: draft.line_items,
+    taxRate,
+    jobZip,
   });
   if (!id) {
     return NextResponse.json({ error: "Could not save quote." }, { status: 500 });

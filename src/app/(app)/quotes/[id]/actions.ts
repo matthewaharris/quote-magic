@@ -136,6 +136,7 @@ export async function saveQuote(
   input: {
     title: string;
     tax_rate: number;
+    job_zip: string;
     duration_override_minutes: number | null;
     lines: EditableLine[];
   }
@@ -200,6 +201,9 @@ export async function saveQuote(
     .update({
       title: input.title.trim() || "Untitled quote",
       tax_rate: taxRate,
+      job_zip: /^[0-9]{5}$/.test(input.job_zip.trim())
+        ? input.job_zip.trim()
+        : null,
       subtotal,
       total,
       est_total_minutes: estTotalMinutes,

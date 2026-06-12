@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TRADES } from "@/lib/types";
 import { updateProfile, refreshLogo } from "./actions";
+import { lookupTax } from "../taxActions";
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-base outline-none placeholder:text-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-200";
@@ -19,6 +20,7 @@ export default function SettingsForm({
     deposit_percent: number;
     default_markup_percent: number;
     default_tax_rate: number;
+    business_zip: string;
     payment_instructions: string;
     website_url: string;
     logo_url: string | null;
@@ -34,6 +36,8 @@ export default function SettingsForm({
     initial.default_markup_percent
   );
   const [taxRate, setTaxRate] = useState(initial.default_tax_rate);
+  const [businessZip, setBusinessZip] = useState(initial.business_zip);
+  const [lookingUpTax, setLookingUpTax] = useState(false);
   const [paymentInstructions, setPaymentInstructions] = useState(
     initial.payment_instructions
   );
@@ -60,6 +64,7 @@ export default function SettingsForm({
       deposit_percent: depositPercent,
       default_markup_percent: markupPercent,
       default_tax_rate: taxRate,
+      business_zip: businessZip,
       payment_instructions: paymentInstructions,
       website_url: website,
     });
@@ -69,6 +74,22 @@ export default function SettingsForm({
         ? { kind: "ok", text: "Saved." }
         : { kind: "error", text: result.message ?? "Could not save" }
     );
+  }
+
+  async function findTaxRate() {
+    setLookingUpTax(true);
+    setMessage(null);
+    const result = await lookupTax(businessZip);
+    setLookingUpTax(false);
+    if (result.ok) {
+      setTaxRate(result.rate);
+      setMessage({
+        kind: "ok",
+        text: `Sales tax${result.region ? ` for ${result.region}` : ""}: ${result.rate}% — save to keep it.`,
+      });
+    } else {
+      setMessage({ kind: "error", text: result.message ?? "Lookup failed." });
+    }
   }
 
   async function fetchLogo() {
@@ -173,6 +194,32 @@ export default function SettingsForm({
           </span>
         </label>
       </div>
+      <label className="block text-sm text-zinc-600">
+        Business zip code
+        <div className="mt-1 flex gap-2">
+          <input
+            inputMode="numeric"
+            maxLength={5}
+            value={businessZip}
+            onChange={(e) =>
+              setBusinessZip(e.target.value.replace(/\D/g, "").slice(0, 5))
+            }
+            placeholder="e.g. 73101"
+            className={`${inputClass} mt-0`}
+          />
+          <button
+            type="button"
+            onClick={findTaxRate}
+            disabled={lookingUpTax || !/^[0-9]{5}$/.test(businessZip)}
+            className="shrink-0 rounded-xl border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50"
+          >
+            {lookingUpTax ? "Looking…" : "Find my tax rate"}
+          </button>
+        </div>
+        <span className="mt-1 block text-xs text-zinc-400">
+          Looks up your local sales tax and fills the field above.
+        </span>
+      </label>
       <label className="block text-sm text-zinc-600">
         Deposit on acceptance (%)
         <input

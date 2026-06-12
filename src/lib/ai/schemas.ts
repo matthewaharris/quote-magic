@@ -42,6 +42,12 @@ export const QuoteDraft = z.object({
   questions_for_contractor: z
     .array(z.string())
     .describe("Things the contractor should confirm before sending"),
+  job_zip: z
+    .string()
+    .nullable()
+    .describe(
+      "5-digit US zip code of the job site, ONLY if a zip code (or an address including one) is explicitly stated in the dictation. Never infer one from a city or neighborhood name; otherwise null."
+    ),
 });
 
 export type QuoteDraftT = z.infer<typeof QuoteDraft>;
@@ -68,6 +74,12 @@ export const TieredQuoteDraft = z.object({
   questions_for_contractor: z
     .array(z.string())
     .describe("Things the contractor should confirm before sending"),
+  job_zip: z
+    .string()
+    .nullable()
+    .describe(
+      "5-digit US zip code of the job site, ONLY if a zip code (or an address including one) is explicitly stated in the dictation. Never infer one from a city or neighborhood name; otherwise null."
+    ),
   good: TierVariant.describe("The leanest sound version of the dictated scope"),
   better: TierVariant.describe("The recommended version — the job as dictated"),
   best: TierVariant.describe(

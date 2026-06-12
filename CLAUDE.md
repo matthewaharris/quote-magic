@@ -86,6 +86,7 @@ fields), change_orders (pending→approved|declined), invoices (QM-####
 numbering, net-7, demo payment_ref SIM-*, deposit_applied +
 change_orders_total breakdown), busy_blocks (contractor-entered calendar
 blocks; quote_events also has 'rescheduled' with previous_start meta).
+contractors.payment_instructions = freeform "how to pay me" text (0010).
 
 Markup & tax (June 11, 2026): contractors set `default_markup_percent`
 (baked into line unit prices at generation — customers never see a markup
@@ -138,6 +139,18 @@ card, only before the appointment starts) — direct rebooking since every
 offered slot is genuinely open; logs 'rescheduled' event with previous_start
 and emails the contractor.
 
+Manual payments bridge (June 12, 2026) — BUILT & VERIFIED (migration 0010):
+real-money launch without Stripe Connect. `src/lib/payments.ts` is the mode
+switch: `manual` (default) shows `contractors.payment_instructions` (new
+/settings textarea) on customer deposit + invoice views (HowToPay card)
+instead of the demo card form; the contractor records money landing via
+JobPanel "Mark deposit received" (unlocks scheduling, emails customer) and
+"Mark invoice paid" (job→paid, REC-* refs vs demo SIM-*, receipt email,
+recorded_by:'contractor' in event meta). `PAYMENTS_MODE=demo` env restores
+the simulated checkout; the demo /api/q/[token]/pay* routes 403 in manual
+mode (otherwise anyone could mark a real invoice paid). Stripe Connect is
+the future third mode — branch points are documented in payments.ts.
+
 ## Next up
 
 1. **Stripe prod go-live (Matt)**: test mode VERIFIED this session (active
@@ -157,7 +170,9 @@ and emails the contractor.
 - Availability: busy blocks are single-day, non-recurring; slot starts are
   hourly from each day's open time; customer can reschedule self-serve any
   number of times up until the appointment starts (no notice window)
-- Demo checkout only (clearly labeled); no real payments
+- No in-app money movement: manual mode relies on the contractor honestly
+  recording payments (REC-* refs); demo checkout only behind
+  PAYMENTS_MODE=demo; Stripe Connect deferred until volume justifies it
 - Single shared DB between dev and prod
 - Logo scrape: no DNS re-resolution (SSRF guard is hostname-level only);
   og:image is often a wide banner, not a logo — re-fetch from /settings

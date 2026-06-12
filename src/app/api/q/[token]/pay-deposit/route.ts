@@ -3,12 +3,20 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/types";
+import { paymentsMode } from "@/lib/payments";
 
 // DEMO deposit payment — same simulated checkout as the invoice pay route.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // Manual mode: deposits are recorded by the contractor, not simulated.
+  if (paymentsMode() !== "demo") {
+    return NextResponse.json(
+      { error: "Online payment is not enabled." },
+      { status: 403 }
+    );
+  }
   const { token } = await params;
   const supabase = createAdminClient();
 

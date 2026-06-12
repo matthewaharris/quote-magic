@@ -70,6 +70,7 @@ export default async function SettingsPage() {
           deposit_percent: Number(contractor.deposit_percent),
           default_markup_percent: Number(contractor.default_markup_percent),
           default_tax_rate: Number(contractor.default_tax_rate),
+          payment_instructions: contractor.payment_instructions ?? "",
           website_url: contractor.website_url ?? "",
           logo_url: contractor.logo_url,
         }}

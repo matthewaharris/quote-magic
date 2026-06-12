@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/types";
+import { paymentsMode } from "@/lib/payments";
 
 // DEMO checkout: accepts any card input, records a simulated payment.
 // No card data is stored or sent anywhere.
@@ -10,6 +11,14 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // In manual mode this endpoint must not exist — it would let anyone
+  // mark a real invoice paid. Contractors record payments from JobPanel.
+  if (paymentsMode() !== "demo") {
+    return NextResponse.json(
+      { error: "Online payment is not enabled." },
+      { status: 403 }
+    );
+  }
   const { token } = await params;
   const supabase = createAdminClient();
 

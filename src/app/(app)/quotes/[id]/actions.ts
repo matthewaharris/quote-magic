@@ -1,10 +1,12 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
 import { sendNudge } from "@/lib/nudge";
+import { formatMoney } from "@/lib/types";
 
 // Manual "send reminder" — contractor's call, so the 48h/once-only cron
 // guards are skipped. Each send is still logged as a 'nudged' event.
@@ -247,6 +249,155 @@ export async function addLineToPriceBook(line: {
   if (error || !data) return { ok: false as const, message: error?.message };
   revalidatePath("/pricebook");
   return { ok: true as const, priceBookItemId: data.id };
+}
+
+// Looks up the customer's email for a quote, when there is one.
+async function customerEmailFor(
+  supabase: Awaited<ReturnType<typeof requireContractor>>["supabase"],
+  customerId: string | null
+): Promise<string | null> {
+  if (!customerId) return null;
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("email")
+    .eq("id", customerId)
+    .maybeSingle();
+  return customer?.email ?? null;
+}
+
+// Manual payments: the money moved outside the app (Zelle, check…); the
+// contractor records it here. REC-* refs distinguish these from the demo
+// checkout's SIM-* ones.
+export async function markDepositReceived(jobId: string) {
+  const { supabase, contractor } = await requireContractor();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, quote_id, status, deposit_amount, deposit_paid_at")
+    .eq("id", jobId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!job) return { ok: false, message: "Job not found." };
+  if (Number(job.deposit_amount) <= 0) {
+    return { ok: false, message: "No deposit due on this job." };
+  }
+  if (job.deposit_paid_at) {
+    return { ok: false, message: "Deposit already recorded." };
+  }
+
+  const ref = `REC-${randomBytes(4).toString("hex")}`;
+  const { error } = await supabase
+    .from("jobs")
+    .update({ deposit_paid_at: new Date().toISOString(), deposit_ref: ref })
+    .eq("id", jobId);
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("quote_events").insert({
+    quote_id: job.quote_id,
+    type: "deposit_paid",
+    meta: {
+      amount: Number(job.deposit_amount),
+      ref,
+      recorded_by: "contractor",
+    },
+  });
+
+  // The deposit was gating scheduling — invite the customer to book.
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("title, share_token, customer_id")
+    .eq("id", job.quote_id)
+    .single();
+  let emailed = false;
+  const email = quote && (await customerEmailFor(supabase, quote.customer_id));
+  if (quote && email) {
+    const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+    await sendEmail({
+      to: email,
+      subject: `Deposit received — pick a time for "${quote.title}"`,
+      html: actionEmailHtml({
+        heading: "Deposit received ✓",
+        body: `${contractor.business_name || "Your contractor"} received your ${formatMoney(Number(job.deposit_amount))} deposit for "<strong>${quote.title}</strong>". You can now pick an appointment time.`,
+        url,
+        cta: "Pick a time",
+        brand: {
+          businessName: contractor.business_name,
+          logoUrl: contractor.logo_url,
+        },
+      }),
+    });
+    emailed = true;
+  }
+
+  revalidatePath(`/quotes`);
+  return { ok: true, emailed };
+}
+
+// Manual payments: close out the invoice once the customer's payment lands.
+export async function markInvoicePaid(jobId: string) {
+  const { supabase, contractor } = await requireContractor();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, quote_id, status")
+    .eq("id", jobId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!job) return { ok: false, message: "Job not found." };
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, number, total, status")
+    .eq("job_id", job.id)
+    .maybeSingle();
+  if (!invoice) return { ok: false, message: "No invoice yet." };
+  if (invoice.status === "paid") {
+    return { ok: false, message: "Invoice is already paid." };
+  }
+
+  const ref = `REC-${randomBytes(4).toString("hex")}`;
+  const paidAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("invoices")
+    .update({ status: "paid", paid_at: paidAt, payment_ref: ref })
+    .eq("id", invoice.id);
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("jobs").update({ status: "paid" }).eq("id", job.id);
+  await supabase.from("quote_events").insert({
+    quote_id: job.quote_id,
+    type: "paid",
+    meta: { number: invoice.number, payment_ref: ref, recorded_by: "contractor" },
+  });
+
+  // Confirmation doubles as the customer's receipt.
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("title, share_token, customer_id")
+    .eq("id", job.quote_id)
+    .single();
+  let emailed = false;
+  const email = quote && (await customerEmailFor(supabase, quote.customer_id));
+  if (quote && email) {
+    const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+    await sendEmail({
+      to: email,
+      subject: `Payment received — invoice ${invoice.number}`,
+      html: actionEmailHtml({
+        heading: "Payment received — thank you!",
+        body: `${contractor.business_name || "Your contractor"} confirmed your payment of <strong>${formatMoney(Number(invoice.total))}</strong> for invoice <strong>${invoice.number}</strong> ("${quote.title}").`,
+        url,
+        cta: "View receipt",
+        brand: {
+          businessName: contractor.business_name,
+          logoUrl: contractor.logo_url,
+        },
+      }),
+    });
+    emailed = true;
+  }
+
+  revalidatePath(`/quotes`);
+  return { ok: true, emailed };
 }
 
 // Contractor reports the job done; customer gets asked to confirm.

@@ -11,7 +11,9 @@ import {
   type QuoteLineItem,
 } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
+import { paymentsMode } from "@/lib/payments";
 import PrintButton from "@/components/PrintButton";
+import HowToPay from "./HowToPay";
 import ChangeOrderRespond from "./ChangeOrderRespond";
 import RespondButtons from "./RespondButtons";
 import ScheduleCalendar from "./ScheduleCalendar";
@@ -131,6 +133,7 @@ export default async function PublicQuotePage({
   }
 
   const businessName = contractor.business_name || "Your contractor";
+  const payMode = paymentsMode();
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-4 py-8">
@@ -313,10 +316,21 @@ export default async function PublicQuotePage({
                 spot.
               </div>
               <div className="print-hide">
-                <PayDeposit
-                  token={token}
-                  amount={formatMoney(Number(job.deposit_amount))}
-                />
+                {payMode === "demo" ? (
+                  <PayDeposit
+                    token={token}
+                    amount={formatMoney(Number(job.deposit_amount))}
+                  />
+                ) : (
+                  <HowToPay
+                    heading="How to pay your deposit"
+                    amount={formatMoney(Number(job.deposit_amount))}
+                    instructions={contractor.payment_instructions}
+                    businessName={businessName}
+                    phone={contractor.phone}
+                    note={`Once ${businessName} confirms your deposit, you'll pick your appointment time right here.`}
+                  />
+                )}
               </div>
             </>
           ) : (
@@ -432,10 +446,21 @@ export default async function PublicQuotePage({
 
         {job?.status === "invoiced" && invoice && (
           <div className="print-hide">
-            <PayInvoice
-              token={token}
-              total={formatMoney(Number(invoice.total))}
-            />
+            {payMode === "demo" ? (
+              <PayInvoice
+                token={token}
+                total={formatMoney(Number(invoice.total))}
+              />
+            ) : (
+              <HowToPay
+                heading="How to pay"
+                amount={formatMoney(Number(invoice.total))}
+                instructions={contractor.payment_instructions}
+                businessName={businessName}
+                phone={contractor.phone}
+                note={`${businessName} will mark invoice ${invoice.number} paid once your payment arrives.`}
+              />
+            )}
           </div>
         )}
 

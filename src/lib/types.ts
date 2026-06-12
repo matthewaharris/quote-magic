@@ -38,6 +38,7 @@ export interface Contractor {
   default_markup_percent: number;
   default_tax_rate: number;
   quoting_instructions: string | null;
+  payment_instructions: string | null;
   availability: Record<string, { start: string; end: string } | null>;
   referred_by: string | null;
   onboarded_at: string | null;

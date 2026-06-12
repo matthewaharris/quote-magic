@@ -19,6 +19,7 @@ export default function SettingsForm({
     deposit_percent: number;
     default_markup_percent: number;
     default_tax_rate: number;
+    payment_instructions: string;
     website_url: string;
     logo_url: string | null;
   };
@@ -33,6 +34,9 @@ export default function SettingsForm({
     initial.default_markup_percent
   );
   const [taxRate, setTaxRate] = useState(initial.default_tax_rate);
+  const [paymentInstructions, setPaymentInstructions] = useState(
+    initial.payment_instructions
+  );
   const [website, setWebsite] = useState(initial.website_url);
   const [logoUrl, setLogoUrl] = useState(initial.logo_url);
 
@@ -56,6 +60,7 @@ export default function SettingsForm({
       deposit_percent: depositPercent,
       default_markup_percent: markupPercent,
       default_tax_rate: taxRate,
+      payment_instructions: paymentInstructions,
       website_url: website,
     });
     setSaving(false);
@@ -182,6 +187,20 @@ export default function SettingsForm({
         <span className="mt-1 block text-xs text-zinc-400">
           Customers pay this up front when they accept a quote. 0 disables
           deposits.
+        </span>
+      </label>
+      <label className="block text-sm text-zinc-600">
+        How customers pay you
+        <textarea
+          value={paymentInstructions}
+          onChange={(e) => setPaymentInstructions(e.target.value)}
+          rows={3}
+          placeholder={'e.g. "Zelle to 405-555-0123, or check payable to Smith Electric"'}
+          className={inputClass}
+        />
+        <span className="mt-1 block text-xs text-zinc-400">
+          Shown on invoices and deposit requests. You mark payments received
+          from the quote page when the money lands.
         </span>
       </label>
 

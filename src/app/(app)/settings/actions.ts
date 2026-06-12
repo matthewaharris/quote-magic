@@ -13,6 +13,7 @@ export async function updateProfile(input: {
   deposit_percent: number;
   default_markup_percent: number;
   default_tax_rate: number;
+  payment_instructions: string;
   website_url: string;
 }) {
   const { supabase, contractor } = await requireContractor();
@@ -36,6 +37,8 @@ export async function updateProfile(input: {
         25,
         Math.max(0, Number(input.default_tax_rate) || 0)
       ),
+      payment_instructions:
+        input.payment_instructions.trim().slice(0, 1000) || null,
       website_url: input.website_url.trim() || null,
     })
     .eq("id", contractor.id);

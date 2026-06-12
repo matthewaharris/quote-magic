@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney, type Invoice, type Job } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
-import { generateInvoiceNow, markJobComplete } from "./actions";
+import {
+  generateInvoiceNow,
+  markDepositReceived,
+  markInvoicePaid,
+  markJobComplete,
+} from "./actions";
 
 const stageLabels: Record<Job["status"], string> = {
   unscheduled: "Accepted — waiting on customer to pick a time",
@@ -80,6 +85,24 @@ export default function JobPanel({
         </p>
       )}
 
+      {Number(job.deposit_amount) > 0 &&
+        !job.deposit_paid_at &&
+        job.status === "unscheduled" && (
+          <div className="mt-2">
+            <button
+              onClick={() => run(() => markDepositReceived(job.id))}
+              disabled={busy}
+              className="w-full rounded-xl border border-emerald-600 py-2.5 text-sm font-semibold text-emerald-700 disabled:opacity-50"
+            >
+              {busy ? "Working…" : "💰 Mark deposit received"}
+            </button>
+            <p className="mt-1 text-xs text-zinc-400">
+              Got the deposit by Zelle, check, or cash? Record it here — the
+              customer gets an email and can pick a time.
+            </p>
+          </div>
+        )}
+
       {["unscheduled", "scheduled"].includes(job.status) && (
         <button
           onClick={() => run(() => markJobComplete(job.id))}
@@ -103,6 +126,22 @@ export default function JobPanel({
           >
             {busy ? "Working…" : "Generate invoice without confirmation"}
           </button>
+        </div>
+      )}
+
+      {job.status === "invoiced" && invoice && invoice.status === "due" && (
+        <div className="mt-3">
+          <button
+            onClick={() => run(() => markInvoicePaid(job.id))}
+            disabled={busy}
+            className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "Working…" : "💵 Mark invoice paid"}
+          </button>
+          <p className="mt-1 text-xs text-zinc-400">
+            Record it when the customer&apos;s payment lands — they&apos;ll
+            get a confirmation email.
+          </p>
         </div>
       )}
 

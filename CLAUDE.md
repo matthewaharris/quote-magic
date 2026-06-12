@@ -203,10 +203,9 @@ security-check covers the new grants.
   customers need /test/ inserted manually)
 - Supabase auth now uses custom SMTP via Resend (configured June 2026);
   dev workaround for no-email login remains `scripts/login-link.mjs`
-- OTP code sign-in works but the code only appears in emails once
-  `{{ .Token }}` is added to the Supabase email templates (Matt action)
-- Nudge cron needs `CRON_SECRET` set in Vercel project env (it's in
-  .env.local; route fails closed without it)
+- OTP code sign-in fully working — Matt added `{{ .Token }}` to the
+  Supabase email templates (June 12, 2026)
+- Nudge cron live: Matt set `CRON_SECRET` in Vercel (June 12, 2026)
 - Quote photos are not persisted — they only inform generation
 - "PDF" = print stylesheet + browser save-as-PDF, not a generated file
 - Referral reward (+10 quotes) only applies to referrers on trial; comp/paid

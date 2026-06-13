@@ -166,13 +166,17 @@ security-check covers the new grants.
 
 ## Next up
 
-1. **Stripe prod go-live (Matt)**: live products/prices/portal/webhook
-   created June 12 via `stripe-setup.mjs --prod` (.env.local stays on test
-   keys — local shares the prod DB). Remaining: paste the 5 live env vars
-   into Vercel (Claude printed them in-session) + redeploy; Stripe
-   dashboard: Billing → Revenue recovery → Retries
+1. **Stripe prod: LIVE (June 12)** — live products/prices/portal/webhook
+   created via `stripe-setup.mjs --prod`; Matt pasted the 5 env vars into
+   Vercel; verified in production with a throwaway trial account: upgrade
+   button → real cs_live_* Stripe Checkout (test account + live Stripe
+   customer deleted after). .env.local stays on TEST keys (local shares
+   the prod DB). Remaining: (a) Matt: Billing → Revenue recovery → Retries
    (dashboard.stripe.com/revenue_recovery/retries, live mode) → if all
-   retries fail → "Cancel the subscription".
+   retries fail → "Cancel the subscription"; (b) webhook signing secret
+   unproven until the first real subscription event lands — check Stripe
+   Dashboard → Webhooks for delivery failures after the first paid signup
+   (sync-on-success covers checkout regardless).
 2. **ZIPTAX_API_KEY (Matt)**: sign up at zip.tax (free tier), add the key
    to .env.local and Vercel — until then tax lookup stubs in dev and says
    "isn't set up yet" in production.

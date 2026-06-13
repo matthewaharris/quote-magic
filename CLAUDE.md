@@ -170,7 +170,9 @@ security-check covers the new grants.
    created June 12 via `stripe-setup.mjs --prod` (.env.local stays on test
    keys — local shares the prod DB). Remaining: paste the 5 live env vars
    into Vercel (Claude printed them in-session) + redeploy; Stripe
-   dashboard: enable "cancel subscription after retries fail".
+   dashboard: Billing → Revenue recovery → Retries
+   (dashboard.stripe.com/revenue_recovery/retries, live mode) → if all
+   retries fail → "Cancel the subscription".
 2. **ZIPTAX_API_KEY (Matt)**: sign up at zip.tax (free tier), add the key
    to .env.local and Vercel — until then tax lookup stubs in dev and says
    "isn't set up yet" in production.

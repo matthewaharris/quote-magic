@@ -73,7 +73,7 @@ function Cta() {
   return (
     <Link
       href="/login"
-      className="mt-8 block w-full rounded-xl bg-amber-600 px-5 py-3.5 text-center text-base font-semibold text-white shadow-sm hover:bg-amber-700"
+      className="mt-8 block w-full rounded-xl bg-amber-600 px-5 py-3.5 text-center text-base font-semibold text-white shadow-sm hover:bg-amber-700 md:mx-auto md:max-w-xs"
     >
       Start quoting free
     </Link>
@@ -101,15 +101,15 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
   ];
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-6 pb-10 pt-12">
-      <section className="text-center">
+    <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-6 pb-10 pt-12 md:max-w-5xl md:px-10 md:pb-16 md:pt-20">
+      <section className="mx-auto max-w-2xl text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/quotemagic-logo.jpg"
           alt="QuoteMagic"
-          className="mx-auto w-44 rounded-3xl"
+          className="mx-auto w-44 rounded-3xl md:w-52"
         />
-        <h1 className="mt-6 text-3xl font-bold tracking-tight text-zinc-900">
+        <h1 className="mt-6 text-3xl font-bold tracking-tight text-zinc-900 md:text-5xl md:leading-tight">
           {trade ? (
             <>
               {trade.emoji} Quoting for {trade.plural}.{" "}
@@ -122,7 +122,7 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
             </>
           )}
         </h1>
-        <p className="mt-3 text-base text-zinc-600">
+        <p className="mt-3 text-base text-zinc-600 md:text-lg">
           {trade
             ? `AI quoting built for solo ${trade.plural} — your prices, your price book, a customer link that closes the job.`
             : "AI quoting for solo trade contractors — your prices, your price book, a customer link that closes the job."}
@@ -142,15 +142,15 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
         </p>
       </section>
 
-      <section className="mt-12">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+      <section className="mx-auto mt-12 max-w-5xl md:mt-20">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 md:text-center">
           How it works
         </h2>
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-4 grid gap-3 md:mt-6 md:grid-cols-3 md:gap-5">
           {steps.map((step, i) => (
             <li
               key={step.title}
-              className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-zinc-200"
+              className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-zinc-200 md:flex-col md:p-6"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">
                 {i + 1}
@@ -164,7 +164,7 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
         </ul>
       </section>
 
-      <section className="mt-12 rounded-2xl bg-zinc-900 p-5 text-center">
+      <section className="mx-auto mt-12 max-w-2xl rounded-2xl bg-zinc-900 p-5 text-center md:mt-20 md:p-8">
         <p className="text-sm font-semibold text-white">
           One link runs the whole job
         </p>
@@ -183,8 +183,8 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
         </p>
       </section>
 
-      <section className="mt-12 text-center">
-        <p className="text-lg font-bold text-zinc-900">
+      <section className="mx-auto mt-12 max-w-2xl text-center md:mt-20">
+        <p className="text-lg font-bold text-zinc-900 md:text-2xl">
           Send your first quote tonight.
         </p>
         <Cta />

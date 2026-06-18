@@ -21,9 +21,13 @@ if (!key || key.includes("REPLACE")) {
 const stripe = new Stripe(key);
 const prod = process.argv.includes("--prod");
 
+// statementDescriptor is what shows on the customer's card statement (5-22
+// chars, must contain a letter, no < > \ ' " *). Per-product so each app
+// under this Stait AI LLC account bills under its own brand instead of the
+// account default ("STAIT AI LLC").
 const TIERS = [
-  { lookupKey: "solo", name: "QuoteMagic Solo", amountCents: 2900, quotes: 30 },
-  { lookupKey: "pro", name: "QuoteMagic Pro", amountCents: 5900, quotes: 150 },
+  { lookupKey: "solo", name: "QuoteMagic Solo", amountCents: 2900, quotes: 30, statementDescriptor: "QUOTEMAGICSOLO" },
+  { lookupKey: "pro", name: "QuoteMagic Pro", amountCents: 5900, quotes: 150, statementDescriptor: "QUOTEMAGICPRO" },
 ];
 
 const out = {};
@@ -38,11 +42,24 @@ for (const tier of TIERS) {
   let price = existing.data.find((p) => p.lookup_key === tier.lookupKey);
   if (price) {
     console.log(`✓ price '${tier.lookupKey}' exists: ${price.id}`);
+    // Self-heal: bring the live product's statement descriptor back in line
+    // with the code if it drifted (or was never set on an older product).
+    const product = price.product;
+    if (product.statement_descriptor !== tier.statementDescriptor) {
+      await stripe.products.update(product.id, {
+        statement_descriptor: tier.statementDescriptor,
+      });
+      console.log(
+        `  ↻ set statement descriptor '${tier.statementDescriptor}' on ${product.id}` +
+          ` (was ${product.statement_descriptor ?? "account default"})`
+      );
+    }
   } else {
     const product = await stripe.products.create({
       name: tier.name,
       metadata: { quotemagic_tier: tier.lookupKey },
       description: `${tier.quotes} AI quotes per month`,
+      statement_descriptor: tier.statementDescriptor,
     });
     price = await stripe.prices.create({
       product: product.id,

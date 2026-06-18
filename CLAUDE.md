@@ -164,6 +164,15 @@ auto-applies that zip's rate over the contractor default. Lookups go
 through the auth-gated server action `src/app/(app)/taxActions.ts`.
 security-check covers the new grants.
 
+Stripe statement descriptors (June 18, 2026): customers' card statements
+show per-PRODUCT descriptors (QUOTEMAGICSOLO / QUOTEMAGICPRO), not the
+account default "STAIT AI LLC". Set on each tier in `stripe-setup.mjs`
+(`statementDescriptor`), which now self-heals: a re-run patches the live
+product if its descriptor drifts. This is the multi-brand pattern — a
+future second app under this same account sets its own product descriptors.
+Note: per-charge `statement_descriptor_suffix` is card-one-time only and
+does NOT apply to subscriptions; product-level is the only lever here.
+
 ## Next up
 
 1. **Stripe prod: LIVE (June 12)** — live products/prices/portal/webhook

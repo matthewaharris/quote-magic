@@ -50,6 +50,12 @@ export default async function SettingsPage() {
         >
           💳 Plan & billing
         </a>
+        <a
+          href="/support"
+          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
+        >
+          💬 Help & support
+        </a>
       </div>
       <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm">
         <p className="font-medium text-zinc-700">

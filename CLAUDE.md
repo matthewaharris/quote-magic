@@ -230,8 +230,12 @@ still tags items "Learned" (its own category, untouched).
 - Tax lookup: zips don't align perfectly with tax districts — the looked-up
   rate seeds an always-editable field, it isn't authoritative; ZIPTAX_API_KEY
   not yet configured (dev stubs 8.25%, prod says "isn't set up yet")
-- Disabled-account contact is a hardcoded mailto to Matt (trial-ended now
-  links to /settings/billing)
+- Support: public /support page (email + FAQ, June 22) links from the
+  marketing footer and Settings ("Help & support"); contact address is
+  support@stait.ai everywhere (terms, privacy, disabled-account screen).
+  Matt must create/forward the support@stait.ai mailbox for it to receive
+  mail. No contact form/helpdesk yet — mailto only. Trial-ended links to
+  /settings/billing.
 - Stripe: test keys configured & verified locally (June 11); production
   still needs live keys in Vercel. Paid quota resets rely on webhooks
   updating billing_period_start (invoice.paid); if webhooks lapse, the

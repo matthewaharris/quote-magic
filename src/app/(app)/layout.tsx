@@ -65,7 +65,7 @@ export default async function AppLayout({
           <p className="mt-1 text-sm text-zinc-500">
             Contact{" "}
             <a
-              href="mailto:mharris26@gmail.com?subject=QuoteMagic%20account"
+              href="mailto:support@stait.ai?subject=QuoteMagic%20account"
               className="underline"
             >
               support

@@ -60,8 +60,8 @@ export default function PrivacyPage() {
           <h2 className="font-semibold text-zinc-900">Deletion & questions</h2>
           <p className="mt-1">
             Email{" "}
-            <a href="mailto:mharris26@gmail.com" className="underline">
-              mharris26@gmail.com
+            <a href="mailto:support@stait.ai" className="underline">
+              support@stait.ai
             </a>{" "}
             to request account deletion or ask anything about your data.
           </p>

@@ -217,6 +217,10 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
             Pricing
           </Link>{" "}
           ·{" "}
+          <Link href="/support" className="underline underline-offset-2">
+            Support
+          </Link>{" "}
+          ·{" "}
           <Link href="/terms" className="underline underline-offset-2">
             Terms
           </Link>{" "}

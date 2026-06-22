@@ -78,8 +78,8 @@ export default function TermsPage() {
           <h2 className="font-semibold text-zinc-900">Contact</h2>
           <p className="mt-1">
             Stait AI LLC ·{" "}
-            <a href="mailto:mharris26@gmail.com" className="underline">
-              mharris26@gmail.com
+            <a href="mailto:support@stait.ai" className="underline">
+              support@stait.ai
             </a>
           </p>
         </section>

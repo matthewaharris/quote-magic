@@ -21,7 +21,7 @@ export async function saveImportedPriceBook(items: ReviewedItem[]) {
       contractor_id: contractor.id,
       name: i.name.trim(),
       description: i.description,
-      category: i.category || "General",
+      category: i.category?.trim() || null,
       unit: i.unit || "each",
       unit_cost: Math.max(0, Number(i.unit_cost) || 0),
       est_minutes_per_unit: Math.max(0, Math.round(Number(i.est_minutes_per_unit) || 0)),

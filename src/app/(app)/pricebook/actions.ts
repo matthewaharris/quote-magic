@@ -71,7 +71,10 @@ function cleanItem(input: PriceBookInput) {
   return {
     name: input.name.trim(),
     description: input.description?.trim() || null,
-    category: input.category?.trim() || "General",
+    // Blank category = Uncategorized bucket on the price book page (no
+    // value stored). Categories are implicit: the distinct set of values
+    // across a contractor's items, populated as they add them.
+    category: input.category?.trim() || null,
     unit: input.unit.trim() || "each",
     unit_cost: Math.max(0, Number(input.unit_cost) || 0),
     est_minutes_per_unit: Math.max(

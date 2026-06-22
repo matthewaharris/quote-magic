@@ -190,6 +190,29 @@ does NOT apply to subscriptions; product-level is the only lever here.
    to .env.local and Vercel — until then tax lookup stubs in dev and says
    "isn't set up yet" in production.
 3. SMS OTP (Twilio) — deferred.
+4. **AI-suggested categories (deferred, Matt's idea June 22)**: when
+   generation creates an item that isn't in the price book, have it propose
+   a category instead of leaving it Uncategorized. Hook point: the
+   extract/generate schemas already carry `category`; the price book page
+   groups by it (see below).
+
+## Price book categories
+
+Price book items group by category on /pricebook (June 22, 2026): the
+`category` column was always there but weak (free-text, blank auto-set to
+"General"). Now categories are IMPLICIT — the distinct set of values across
+a contractor's items, derived client-side in `PriceBookManager.tsx` (no
+categories table). Blank/null = "Uncategorized" bucket (pinned last);
+"General" auto-default removed from both write paths (pricebook/actions.ts
++ pricebook/import/actions.ts now store null). The add/edit form's Category
+field is a dropdown of existing values + "Uncategorized" + "+ New
+category…", clearly optional; new names are case-insensitively deduped
+against existing ones (normalizeCategory). The page is an accordion:
+per-category sections with item-count badges, collapse/expand-all, collapse
+state persisted to localStorage (COLLAPSE_KEY); a search box filters across
+name/description/category and, while active, flattens to matching groups
+auto-expanded (collapse state ignored). Quote-editor "save to price book"
+still tags items "Learned" (its own category, untouched).
 
 ## Known prototype limitations
 

@@ -73,7 +73,7 @@ function Cta() {
   return (
     <Link
       href="/login"
-      className="mt-8 block w-full rounded-xl bg-amber-600 px-5 py-3.5 text-center text-base font-semibold text-white shadow-sm hover:bg-amber-700 md:mx-auto md:max-w-xs"
+      className="mt-8 block w-full rounded-xl bg-brand-gradient px-5 py-3.5 text-center text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition hover:brightness-105 md:mx-auto md:max-w-xs"
     >
       Start quoting free
     </Link>
@@ -113,12 +113,12 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
           {trade ? (
             <>
               {trade.emoji} Quoting for {trade.plural}.{" "}
-              <span className="text-amber-600">Same day.</span>
+              <span className="text-brand-gradient">Same day.</span>
             </>
           ) : (
             <>
               Dictate the job. Send the quote.{" "}
-              <span className="text-amber-600">Same day.</span>
+              <span className="text-brand-gradient">Same day.</span>
             </>
           )}
         </h1>
@@ -164,21 +164,21 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
         </ul>
       </section>
 
-      <section className="mx-auto mt-12 max-w-2xl rounded-2xl bg-zinc-900 p-5 text-center md:mt-20 md:p-8">
+      <section className="mx-auto mt-12 max-w-2xl rounded-2xl bg-brand-gradient p-5 text-center shadow-lg shadow-indigo-500/20 md:mt-20 md:p-8">
         <p className="text-sm font-semibold text-white">
           One link runs the whole job
         </p>
-        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-xs font-medium text-zinc-300">
+        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-xs font-medium text-white/90">
           {LIFECYCLE.map((stage, i) => (
             <span key={stage} className="flex items-center gap-x-1.5">
-              {i > 0 && <span className="text-zinc-600">→</span>}
-              <span className="rounded-full bg-zinc-800 px-2.5 py-1">
+              {i > 0 && <span className="text-white/60">→</span>}
+              <span className="rounded-full bg-white/20 px-2.5 py-1">
                 {stage}
               </span>
             </span>
           ))}
         </p>
-        <p className="mt-3 text-xs text-zinc-400">
+        <p className="mt-3 text-xs text-white/80">
           No app for your customer to install. No invoice to retype.
         </p>
       </section>

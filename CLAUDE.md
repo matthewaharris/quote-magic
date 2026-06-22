@@ -24,6 +24,15 @@ dashboard (stats + comp / extend-trial / disable / re-enable, gated by
 ## Stack & conventions
 
 - Next.js 16 App Router + TS + Tailwind v4, mobile-first, max-w-lg layouts
+- BRAND COLOR (June 22): the app accent is the logo's cyan-blue, NOT orange.
+  Implemented in `globals.css` by remapping the whole `amber-*` palette to
+  brand cyan in `@theme` — so every existing `amber-*` class renders cyan
+  (the class name says amber but paints cyan; don't be fooled). Signature
+  surfaces use the full logo gradient via the `.bg-brand-gradient` /
+  `.text-brand-gradient` utilities (`--qm-gradient`): landing hero CTA,
+  "Same day." accent, lifecycle band, and the in-app "Magic" wordmark.
+  Dark mode is a planned follow-up (Midnight palette + toggle; mockup proved
+  it at /design-explorer.html, an uncommitted throwaway in public/).
 - Supabase: Postgres + magic-link auth (`@supabase/ssr`); session refresh in
   `src/proxy.ts` (Next 16 proxy convention, not middleware)
 - Claude API: `claude-opus-4-8`, `thinking: {type:"adaptive"}`, structured

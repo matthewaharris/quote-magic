@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* QuoteMagic brand gradient (logo: cyan → indigo → magenta) */
+  --qm-gradient: linear-gradient(135deg, #11b1f1 0%, #5b2fe0 55%, #d91fd2 100%);
 }
 
 @theme inline {
@@ -10,6 +12,33 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Recolor the app's accent from the old amber to the logo's cyan-blue in one
+   place: every existing `amber-*` utility now renders brand cyan. Signature
+   surfaces (hero CTA, accent words, wordmark, lifecycle band) layer the full
+   brand gradient on top via the utilities below. */
+@theme {
+  --color-amber-50: #ecf9ff;
+  --color-amber-100: #d3f0ff;
+  --color-amber-200: #abe1ff;
+  --color-amber-300: #74ccff;
+  --color-amber-400: #36b2f6;
+  --color-amber-500: #119ae6;
+  --color-amber-600: #0e84cc;
+  --color-amber-700: #0b6aa6;
+  --color-amber-800: #0e5783;
+  --color-amber-900: #11486b;
+}
+
+.bg-brand-gradient {
+  background-image: var(--qm-gradient);
+}
+.text-brand-gradient {
+  background: var(--qm-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -26,7 +26,7 @@ export default async function AppLayout({
         {/* One flex item so the parent's gap-2 doesn't split the wordmark
             into "Quote Magic" — it reads as the single-word logo "QuoteMagic". */}
         <span>
-          Quote<span className="text-amber-600">Magic</span>
+          Quote<span className="text-brand-gradient">Magic</span>
         </span>
       </Link>
       <div className="flex items-center gap-3">

@@ -96,7 +96,7 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
     },
     {
       title: "📲 Customer closes online",
-      body: "They accept, pick a time, and pay from one link. You get notified at every step.",
+      body: "They accept, pick a time, and get their invoice — all from one link. You get notified at every step.",
     },
   ];
 

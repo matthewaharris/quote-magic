@@ -32,6 +32,7 @@ const TIER_META: Record<
       "30 AI quotes a month",
       "Your logo on quotes — no QuoteMagic badge",
       "AI import: build your price book from past jobs",
+      "AI-drafted customer messages & smart follow-ups",
     ],
   },
   pro: {

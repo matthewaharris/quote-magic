@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { draftFollowupMessage } from "@/lib/ai/quote";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { capabilitiesFor } from "@/lib/plan";
 import { formatMoney } from "@/lib/types";
 
 const NUDGE_AFTER_HOURS = 48;
@@ -64,18 +66,35 @@ export async function sendNudge(
 
   const { data: contractor } = await supabase
     .from("contractors")
-    .select("business_name, logo_url")
+    .select("business_name, logo_url, plan, plan_tier")
     .eq("id", quote.contractor_id)
     .single();
   const businessName = contractor?.business_name || "Your contractor";
   const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/q/${quote.share_token}`;
+
+  // Solo+: a personalized, job-specific nudge. Any failure falls back to the
+  // generic line — a reminder must never be blocked by the AI call.
+  let body = `Your quote for "<strong>${quote.title}</strong>" (${formatMoney(Number(quote.total))}) from ${businessName} is ready whenever you are — questions welcome.`;
+  if (contractor && capabilitiesFor(contractor).aiFollowup) {
+    try {
+      const personalized = await draftFollowupMessage({
+        businessName,
+        title: quote.title,
+        total: Number(quote.total),
+        customerName: customer.name,
+      });
+      if (personalized) body = personalized;
+    } catch (err) {
+      console.error("nudge: follow-up draft failed, using generic", err);
+    }
+  }
 
   const result = await sendEmail({
     to: customer.email,
     subject: `Still thinking it over? Your quote from ${businessName}`,
     html: actionEmailHtml({
       heading: "Still thinking it over?",
-      body: `Your quote for "<strong>${quote.title}</strong>" (${formatMoney(Number(quote.total))}) from ${businessName} is ready whenever you are — questions welcome.`,
+      body,
       url,
       cta: "View your quote",
       brand: {

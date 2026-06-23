@@ -16,7 +16,7 @@ export async function generateMetadata({
   if (!copy) return {};
   return {
     title: `QuoteMagic for ${copy.plural} — dictate the job, send the quote, same day`,
-    description: `AI quoting built for solo ${copy.plural}: dictate the job, send a quote from your own price book, and let the customer accept, schedule, and pay online.`,
+    description: `AI quoting built for solo ${copy.plural}: dictate the job, send a quote from your own price book, and let the customer accept, schedule, and get their invoice online.`,
   };
 }
 

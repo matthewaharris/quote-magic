@@ -25,6 +25,44 @@ const MESSAGE_SYSTEM = `You write the short message a trade contractor sends a h
 - Don't invent prices, dates, or details beyond what you're given.
 - End with just the business name on its own line.`;
 
+const FOLLOWUP_SYSTEM = `You write the body of a gentle follow-up email a trade contractor sends a homeowner who hasn't responded to a quote yet. Rules:
+- 1 to 2 sentences, warm and low-pressure — a friendly nudge, never pushy, and never offer a discount.
+- Reference the specific job so it feels personal, not a form letter.
+- Invite questions and reassure them there's no rush.
+- Plain prose only: no greeting line, no signature, no links, no markdown or HTML.`;
+
+// AI-personalized follow-up nudge body (Solo+). Falls back to generic copy
+// in the caller if this throws or returns empty.
+export async function draftFollowupMessage(input: {
+  businessName: string;
+  title: string;
+  total: number;
+  customerName?: string | null;
+}): Promise<string> {
+  const response = await client.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 250,
+    system: FOLLOWUP_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Business: ${input.businessName}`,
+          input.customerName ? `Customer: ${input.customerName}` : ``,
+          `Quote: ${input.title}`,
+          `Total: $${input.total.toFixed(2)}`,
+          ``,
+          `Write the follow-up body.`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  const block = response.content.find((b) => b.type === "text");
+  return block && block.type === "text" ? block.text.trim() : "";
+}
+
 // AI-drafted, editable message that accompanies a quote link (Solo+ feature).
 export async function draftCustomerMessage(input: {
   businessName: string;

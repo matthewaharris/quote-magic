@@ -3,9 +3,11 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { PriceBookItem } from "@/lib/types";
 import {
   ExtractedPriceBook,
+  JobTemplates,
   QuoteDraft,
   TieredQuoteDraft,
   type ExtractedPriceBookT,
+  type JobTemplatesT,
   type QuoteDraftT,
   type TieredQuoteDraftT,
 } from "./schemas";
@@ -61,6 +63,39 @@ export async function draftFollowupMessage(input: {
   });
   const block = response.content.find((b) => b.type === "text");
   return block && block.type === "text" ? block.text.trim() : "";
+}
+
+// Pro: distill a contractor's recurring jobs into one-tap quote starters.
+export async function suggestJobTemplates(input: {
+  trade: string;
+  recentJobs: { title: string; summary: string | null }[];
+}): Promise<JobTemplatesT> {
+  const response = await client.messages.parse({
+    model: FAST_MODEL,
+    max_tokens: 1200,
+    system: `You spot a trade contractor's RECURRING jobs from their recent quote history and turn the common ones into reusable one-tap starters.
+- Return 3 to 5 templates for the jobs that recur or are clearly typical for this ${input.trade || "contractor"}.
+- label: a short job name. starter: the typical scope phrased in first person as if dictated aloud, ready for the contractor to tweak (mention typical quantities/steps but keep it editable, not job-specific to one customer).
+- Generalize — never reference a specific customer, address, or one-off detail from the history.
+- If history is too thin to find real patterns, return the most typical jobs for this trade instead.`,
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Trade: ${input.trade || "general contractor"}`,
+          `Recent quotes:`,
+          ...input.recentJobs.map(
+            (j, i) => `${i + 1}. ${j.title}${j.summary ? ` — ${j.summary}` : ""}`
+          ),
+        ].join("\n"),
+      },
+    ],
+    output_config: { format: zodOutputFormat(JobTemplates) },
+  });
+  if (!response.parsed_output) {
+    throw new Error("Job template generation returned no structured output");
+  }
+  return response.parsed_output;
 }
 
 const WINBACK_SYSTEM = `You write the message a trade contractor sends a homeowner who just DECLINED their quote. The goal is to keep the door open, graciously. Rules:

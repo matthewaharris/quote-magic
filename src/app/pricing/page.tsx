@@ -42,6 +42,7 @@ const TIER_META: Record<
       "150 AI quotes a month",
       "Everything in Solo, plus:",
       "AI win-back when a customer declines",
+      "One-tap starts from your recurring jobs",
     ],
   },
 };

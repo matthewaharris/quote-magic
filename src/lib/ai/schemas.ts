@@ -107,3 +107,21 @@ export const ExtractedPriceBook = z.object({
 });
 
 export type ExtractedPriceBookT = z.infer<typeof ExtractedPriceBook>;
+
+// Output schema for job templates: recurring jobs distilled into one-tap starts.
+export const JobTemplates = z.object({
+  templates: z.array(
+    z.object({
+      label: z
+        .string()
+        .describe("Short name for this recurring job, e.g. 'Panel upgrade'"),
+      starter: z
+        .string()
+        .describe(
+          "A first-person dictation seed the contractor can expand — the typical scope of this job, phrased as if spoken aloud"
+        ),
+    })
+  ),
+});
+
+export type JobTemplatesT = z.infer<typeof JobTemplates>;

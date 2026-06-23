@@ -3,6 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Dictation from "@/components/Dictation";
+import { getJobTemplates } from "./actions";
+
+type Template = { label: string; starter: string };
 
 type Photo = { media_type: "image/jpeg"; data: string; preview: string };
 
@@ -38,6 +41,19 @@ export default function NewQuotePage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limitHit, setLimitHit] = useState<"trial" | "quota" | null>(null);
+  const [templates, setTemplates] = useState<Template[] | null>(null);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [templatesUpsell, setTemplatesUpsell] = useState(false);
+
+  async function loadTemplates() {
+    setLoadingTemplates(true);
+    setError(null);
+    const result = await getJobTemplates();
+    setLoadingTemplates(false);
+    if (result.ok) setTemplates(result.templates);
+    else if (result.upsell) setTemplatesUpsell(true);
+    else setError(result.message ?? "Couldn't load templates.");
+  }
 
   async function addPhotos(files: FileList | null) {
     if (!files) return;
@@ -114,7 +130,53 @@ export default function NewQuotePage() {
         what&apos;s being installed, where, distances, anything unusual.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-4">
+        {templates ? (
+          templates.length > 0 ? (
+            <div>
+              <p className="text-xs font-medium text-zinc-500">
+                Start from a recurring job:
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {templates.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    onClick={() => setTranscript(t.starter)}
+                    className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800"
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400">
+              No recurring jobs found yet — send a few quotes and they&apos;ll
+              show up here.
+            </p>
+          )
+        ) : templatesUpsell ? (
+          <p className="text-xs text-zinc-500">
+            ✨ One-tap job templates are a{" "}
+            <a href="/settings/billing" className="font-medium text-amber-700 underline">
+              Pro
+            </a>{" "}
+            feature.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={loadTemplates}
+            disabled={loadingTemplates}
+            className="text-sm font-medium text-amber-700 disabled:opacity-50"
+          >
+            {loadingTemplates ? "Finding your usual jobs…" : "✨ Start from a recurring job"}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-4">
         <Dictation
           value={transcript}
           onChange={setTranscript}

@@ -76,40 +76,52 @@ for (const tier of TIERS) {
 }
 
 // --- Billing Portal configuration (find by metadata marker) -----------------
+// Build the switchable-products list from the current TIERS every run, so the
+// portal self-heals when a tier is added (e.g. Basic) — same pattern as the
+// statement descriptors above. Stripe's update replaces the product list, so
+// passing the full set keeps every tier switchable in both directions.
+const portalPrices = await Promise.all(
+  TIERS.map(async (t) => {
+    const p = await stripe.prices.list({
+      lookup_keys: [t.lookupKey],
+      expand: ["data.product"],
+    });
+    return p.data[0];
+  })
+);
+const portalFeatures = {
+  payment_method_update: { enabled: true },
+  invoice_history: { enabled: true },
+  customer_update: { enabled: true, allowed_updates: ["email", "address"] },
+  subscription_cancel: { enabled: true, mode: "at_period_end" },
+  subscription_update: {
+    enabled: true,
+    default_allowed_updates: ["price"],
+    proration_behavior: "create_prorations",
+    products: portalPrices.map((price) => ({
+      product:
+        typeof price.product === "string" ? price.product : price.product.id,
+      prices: [price.id],
+    })),
+  },
+};
+
 const configs = await stripe.billingPortal.configurations.list({ limit: 100 });
 let portal = configs.data.find((c) => c.metadata?.quotemagic === "1");
 if (portal) {
-  console.log(`✓ portal configuration exists: ${portal.id}`);
-} else {
-  const priceIds = Object.fromEntries(
-    await Promise.all(
-      TIERS.map(async (t) => {
-        const p = await stripe.prices.list({ lookup_keys: [t.lookupKey] });
-        return [t.lookupKey, p.data[0]];
-      })
-    )
+  portal = await stripe.billingPortal.configurations.update(portal.id, {
+    features: portalFeatures,
+  });
+  console.log(
+    `↻ portal configuration synced: ${portal.id} (${TIERS.length} tiers switchable)`
   );
+} else {
   portal = await stripe.billingPortal.configurations.create({
     business_profile: {
       privacy_policy_url: "https://quotemagic.app/privacy",
       terms_of_service_url: "https://quotemagic.app/terms",
     },
-    features: {
-      payment_method_update: { enabled: true },
-      invoice_history: { enabled: true },
-      customer_update: { enabled: true, allowed_updates: ["email", "address"] },
-      subscription_cancel: { enabled: true, mode: "at_period_end" },
-      subscription_update: {
-        enabled: true,
-        default_allowed_updates: ["price"],
-        proration_behavior: "create_prorations",
-        products: Object.values(priceIds).map((price) => ({
-          product:
-            typeof price.product === "string" ? price.product : price.product.id,
-          prices: [price.id],
-        })),
-      },
-    },
+    features: portalFeatures,
     metadata: { quotemagic: "1" },
   });
   console.log(`+ created portal configuration: ${portal.id}`);

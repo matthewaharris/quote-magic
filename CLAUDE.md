@@ -198,14 +198,21 @@ learn-as-you-go. Migration 0012 widened the plan_tier check to include
 basic. Pricing page lists only SHIPPED features per tier — add the AI
 perks below as they land so we never advertise unbuilt features.
 
-Per-tier AI features being built in phases (mostly NOT built yet):
-- Solo: AI-drafted customer message (sent with the quote), AI-personalized
-  follow-up/nudge copy.
-- Pro: AI win-back on declines, narrated insights/analytics, photo-measure
-  (estimate quantities from job photos), one-tap job templates.
-The capability flags (aiCustomerMessage, aiFollowup, aiWinBack, aiInsights,
-photoMeasure, jobTemplates) already exist in plan.ts — wire each feature to
-its flag and add it to the pricing page when shipped.
+Per-tier AI features (June 22) — most now SHIPPED, all via Haiku
+(FAST_MODEL in src/lib/ai/quote.ts), each gated by its plan.ts flag:
+- Solo: AI customer message (draftCustomerMessage, SendPanel "Draft a
+  message", aiCustomerMessage) ✅; AI-personalized follow-up nudge copy
+  (draftFollowupMessage wired into src/lib/nudge.ts, aiFollowup) ✅.
+- Pro: AI win-back on declined quotes (draftWinBackMessage, SendPanel shows
+  it when status='declined', aiWinBack) ✅; one-tap job templates
+  (suggestJobTemplates → quotes/new getJobTemplates action → chips that fill
+  the dictation, jobTemplates) ✅.
+- STILL TODO: aiInsights (narrated analytics dashboard — win rate, avg job
+  value, deposit-close correlation), photoMeasure (estimate quantities/
+  dimensions from job photos at generation time — note photos aren't
+  persisted, so this lives in the generate flow). Flags exist in plan.ts.
+Pricing page lists each Solo/Pro perk as it ships; add insights + photo-
+measure when built.
 
 PROD TODO for Basic: run `stripe-setup.mjs --prod` (now includes basic,
 descriptor QUOTEMAGICBASIC) to create the live $9 product/price, add

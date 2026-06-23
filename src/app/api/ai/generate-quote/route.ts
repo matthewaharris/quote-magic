@@ -6,6 +6,7 @@ import {
   type QuoteImage,
 } from "@/lib/ai/quote";
 import { getUsageStatus } from "@/lib/billing";
+import { capabilitiesFor } from "@/lib/plan";
 import { isValidZip, lookupTaxRate } from "@/lib/tax";
 import type { PriceBookItem } from "@/lib/types";
 
@@ -221,6 +222,11 @@ export async function POST(request: Request) {
     return quote.id as string;
   }
 
+  // Photo-measure (Pro): when photos are attached, have the model actively
+  // estimate quantities/dimensions from them and surface the measurements.
+  const measure =
+    capabilitiesFor(contractor).photoMeasure && (images?.length ?? 0) > 0;
+
   const aiInput = {
     transcript,
     priceBook,
@@ -228,6 +234,7 @@ export async function POST(request: Request) {
     trade: contractor.trade,
     instructions: contractor.quoting_instructions,
     images,
+    measure,
   };
 
   if (body?.tiered) {

@@ -226,6 +226,8 @@ export type QuoteImage = {
   data: string; // base64, no data: prefix
 };
 
+const MEASURE_INSTRUCTION = `\nPhoto-measure: the contractor wants real measurements off these photos. For anything quantifiable you can see (areas, lengths, runs, counts), estimate a concrete number, use it to set the matching line item's quantity, and record how you got it in assumptions, prefixed "From your photo: " (e.g. "From your photo: back deck ≈ 18 × 16 ft ≈ 290 sq ft"). Be clear these are photo estimates the contractor should confirm on site.`;
+
 function buildQuoteContent(input: {
   transcript: string;
   priceBook: PriceBookItem[];
@@ -233,6 +235,7 @@ function buildQuoteContent(input: {
   trade: string;
   instructions?: string | null;
   images?: QuoteImage[];
+  measure?: boolean;
 }) {
   const priceBookForPrompt = input.priceBook
     .map((i) => ({
@@ -261,6 +264,9 @@ function buildQuoteContent(input: {
     ``,
     `Dictated job description:`,
     `"""${input.transcript}"""`,
+    ...(input.measure && (input.images?.length ?? 0) > 0
+      ? [MEASURE_INSTRUCTION]
+      : []),
   ].join("\n");
 
   return [
@@ -283,6 +289,7 @@ export async function generateQuote(input: {
   trade: string;
   instructions?: string | null;
   images?: QuoteImage[];
+  measure?: boolean;
 }): Promise<QuoteDraftT> {
   const response = await client.messages.parse({
     model: MODEL,
@@ -314,6 +321,7 @@ export async function generateTieredQuote(input: {
   trade: string;
   instructions?: string | null;
   images?: QuoteImage[];
+  measure?: boolean;
 }): Promise<TieredQuoteDraftT> {
   const response = await client.messages.parse({
     model: MODEL,

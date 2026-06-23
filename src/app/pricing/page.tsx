@@ -44,6 +44,7 @@ const TIER_META: Record<
       "AI win-back when a customer declines",
       "One-tap starts from your recurring jobs",
       "Win-rate & job-value insights",
+      "Measure quantities from job photos",
     ],
   },
 };

@@ -206,13 +206,15 @@ Per-tier AI features (June 22) — most now SHIPPED, all via Haiku
 - Pro: AI win-back on declined quotes (draftWinBackMessage, SendPanel shows
   it when status='declined', aiWinBack) ✅; one-tap job templates
   (suggestJobTemplates → quotes/new getJobTemplates action → chips that fill
-  the dictation, jobTemplates) ✅.
-- STILL TODO: aiInsights (narrated analytics dashboard — win rate, avg job
-  value, deposit-close correlation), photoMeasure (estimate quantities/
-  dimensions from job photos at generation time — note photos aren't
-  persisted, so this lives in the generate flow). Flags exist in plan.ts.
-Pricing page lists each Solo/Pro perk as it ships; add insights + photo-
-measure when built.
+  the dictation, jobTemplates) ✅; insights page (/insights, src/lib/
+  insights.ts computeInsights + narrateInsights, aiInsights) ✅; photo-measure
+  (generate-quote route passes measure=photoMeasure && photos>0 into
+  generateQuote/Tiered → buildQuoteContent appends MEASURE_INSTRUCTION;
+  measurements surface in the quote's assumptions as "From your photo: …",
+  photoMeasure) ✅.
+ALL SIX SHIPPED. photoMeasure's wiring is build-verified; its measurement
+quality is best confirmed with a real job photo (deck/room/roof) — a logo or
+stock image isn't a fair test. Each perk is listed on the pricing page.
 
 PROD TODO for Basic: run `stripe-setup.mjs --prod` (now includes basic,
 descriptor QUOTEMAGICBASIC) to create the live $9 product/price, add

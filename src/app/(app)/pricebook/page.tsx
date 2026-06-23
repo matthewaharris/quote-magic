@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { requireContractor } from "@/lib/contractor";
+import { capabilitiesFor } from "@/lib/plan";
 import type { PriceBookItem } from "@/lib/types";
 import PriceBookManager from "./PriceBookManager";
-import { seedDemoPriceBook } from "./actions";
+import StarterBook from "./StarterBook";
 
 export default async function PriceBookPage() {
   const { supabase, contractor } = await requireContractor();
+  const canBulkImport = capabilitiesFor(contractor).bulkImport;
 
   const { data } = await supabase
     .from("price_book_items")
@@ -24,34 +26,42 @@ export default async function PriceBookPage() {
       </p>
 
       {items.length === 0 ? (
-        <div className="mt-8 space-y-3 text-center">
-          <p className="text-zinc-500">Your price book is empty.</p>
-          <Link
-            href="/pricebook/import"
-            className="block w-full rounded-xl bg-amber-600 px-5 py-3.5 font-semibold text-white"
-          >
-            🎙️ Teach the AI from past jobs
-          </Link>
-          <form
-            action={async () => {
-              "use server";
-              await seedDemoPriceBook();
-            }}
-          >
-            <button className="w-full rounded-xl border border-zinc-300 bg-white px-5 py-3 font-medium text-zinc-700">
-              Or load the demo electrician price book
-            </button>
-          </form>
-        </div>
+        <>
+          <StarterBook trade={contractor.trade} />
+          {canBulkImport ? (
+            <Link
+              href="/pricebook/import"
+              className="mt-4 block text-center text-sm font-medium text-amber-700 underline"
+            >
+              🎙️ Or AI bulk import from your past jobs
+            </Link>
+          ) : (
+            <Link
+              href="/pricebook/import"
+              className="mt-4 block text-center text-sm font-medium text-amber-700 underline"
+            >
+              🔒 AI bulk import from past jobs — Solo &amp; Pro
+            </Link>
+          )}
+        </>
       ) : (
         <>
           <PriceBookManager items={items} />
-          <Link
-            href="/pricebook/import"
-            className="mt-6 block text-center text-sm font-medium text-amber-700 underline"
-          >
-            🎙️ Import more from past jobs
-          </Link>
+          {canBulkImport ? (
+            <Link
+              href="/pricebook/import"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3.5 font-semibold text-white"
+            >
+              🎙️ AI bulk import from past jobs
+            </Link>
+          ) : (
+            <Link
+              href="/pricebook/import"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-5 py-3.5 font-semibold text-amber-800"
+            >
+              🔒 AI bulk import — Solo &amp; Pro
+            </Link>
+          )}
         </>
       )}
     </div>

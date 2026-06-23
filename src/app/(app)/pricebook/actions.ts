@@ -2,29 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
+import { draftStarterPriceBook } from "@/lib/ai/quote";
 
-// Demo price book for an electrician — lets the sauna-job demo work before
-// the dictation-based onboarding (Phase 4) exists. unit_cost is the price
-// charged to the customer (labor + typical materials) per unit.
-const DEMO_ITEMS = [
-  { name: "50A 2-pole breaker install", category: "Panel", unit: "each", unit_cost: 185, est_minutes_per_unit: 45, description: "Install 50 amp double-pole breaker in main panel" },
-  { name: "20A single-pole breaker install", category: "Panel", unit: "each", unit_cost: 95, est_minutes_per_unit: 30, description: "Install 20 amp single-pole breaker" },
-  { name: "Panel rework / make space", category: "Panel", unit: "hour", unit_cost: 150, est_minutes_per_unit: 60, description: "Rearrange existing breakers, add tandems, label panel" },
-  { name: "6/2 NM-B cable run", category: "Wiring", unit: "foot", unit_cost: 12, est_minutes_per_unit: 2, description: "Run 6/2 with ground for 50A 240V circuit, interior" },
-  { name: "12/2 NM-B cable run", category: "Wiring", unit: "foot", unit_cost: 6, est_minutes_per_unit: 2, description: "Run 12/2 with ground for 20A 120V circuit, interior" },
-  { name: "240V 60A disconnect / spa panel", category: "Devices", unit: "each", unit_cost: 260, est_minutes_per_unit: 75, description: "Install outdoor-rated 60A disconnect with GFCI breaker" },
-  { name: "120V GFCI outlet install", category: "Devices", unit: "each", unit_cost: 145, est_minutes_per_unit: 40, description: "New GFCI-protected receptacle including box and cover" },
-  { name: "Standard 120V outlet install", category: "Devices", unit: "each", unit_cost: 110, est_minutes_per_unit: 30, description: "New 15/20A receptacle on existing circuit" },
-  { name: "Single-pole switch install", category: "Devices", unit: "each", unit_cost: 95, est_minutes_per_unit: 25, description: "New single-pole switch including box" },
-  { name: "Hardwire appliance connection", category: "Hookup", unit: "each", unit_cost: 180, est_minutes_per_unit: 60, description: "Direct-wire connection of fixed appliance with whip/strain relief" },
-  { name: "Equipment terminal hookup", category: "Hookup", unit: "each", unit_cost: 200, est_minutes_per_unit: 60, description: "Terminate conductors at equipment control box per manufacturer spec" },
-  { name: "Trenching for underground run", category: "Site work", unit: "foot", unit_cost: 9, est_minutes_per_unit: 5, description: "Hand-dig 18-24 in trench for conduit" },
-  { name: "EMT conduit run", category: "Wiring", unit: "foot", unit_cost: 11, est_minutes_per_unit: 4, description: "Surface-mount EMT conduit with conductors" },
-  { name: "Service call / diagnostics", category: "Service", unit: "each", unit_cost: 120, est_minutes_per_unit: 45, description: "On-site troubleshooting, first 45 minutes" },
-  { name: "Permit & inspection coordination", category: "Service", unit: "each", unit_cost: 250, est_minutes_per_unit: 30, description: "Pull electrical permit and schedule inspection" },
-];
-
-export async function seedDemoPriceBook() {
+// Generate a starter price book tailored to the contractor's trade (and an
+// optional free-text business description) with AI, so a brand-new account
+// can start quoting immediately. Items land as 'seeded' and are fully
+// editable — believable starting prices the contractor adjusts to their own.
+export async function generateStarterPriceBook(description?: string) {
   const { supabase, contractor } = await requireContractor();
 
   const { count } = await supabase
@@ -36,26 +20,45 @@ export async function seedDemoPriceBook() {
     return { ok: false, message: "Price book already has items." };
   }
 
+  let items;
+  try {
+    const drafted = await draftStarterPriceBook({
+      trade: contractor.trade,
+      description: description?.trim() || null,
+      hourlyRate: Number(contractor.hourly_rate),
+    });
+    items = drafted.items;
+  } catch {
+    return {
+      ok: false,
+      message: "Couldn't generate a starter price book. Please try again.",
+    };
+  }
+
+  if (!items.length) {
+    return { ok: false, message: "No items were generated. Try again." };
+  }
+
   const { error } = await supabase.from("price_book_items").insert(
-    DEMO_ITEMS.map((item) => ({
-      ...item,
+    items.map((item) => ({
       contractor_id: contractor.id,
+      name: item.name,
+      description: item.description || null,
+      category: item.category?.trim() || null,
+      unit: item.unit?.trim() || "each",
+      unit_cost: Math.max(0, Number(item.unit_cost_estimate) || 0),
+      est_minutes_per_unit: Math.max(
+        0,
+        Math.round(Number(item.est_minutes_per_unit) || 0)
+      ),
       source: "seeded" as const,
     }))
   );
 
   if (error) return { ok: false, message: error.message };
 
-  // Give the demo contractor a sensible profile if still blank.
-  if (!contractor.business_name) {
-    await supabase
-      .from("contractors")
-      .update({ business_name: "Demo Electric Co.", trade: "electrician" })
-      .eq("id", contractor.id);
-  }
-
   revalidatePath("/pricebook");
-  return { ok: true, message: `Added ${DEMO_ITEMS.length} demo items.` };
+  return { ok: true, message: `Added ${items.length} starter items.` };
 }
 
 export interface PriceBookInput {

@@ -353,6 +353,54 @@ Rules:
 - De-duplicate: one item per distinct kind of work.
 - Categories should be short and reusable, matched to the contractor's trade (e.g. Panel, Wiring, Devices for an electrician; Rough-in, Fixtures, Drains for a plumber; Prep, Demo, Finish for a remodeler).`;
 
+const STARTER_SYSTEM = `You are the onboarding engine inside QuoteMagic. A trade contractor just signed up with an EMPTY price book. Generate a sensible STARTER price book for them — the common, reusable line items a contractor in their trade bills again and again — so they can start quoting immediately and then edit prices to match their own.
+
+Rules:
+- Return 12 to 18 generic, job-agnostic items typical for this trade. No customer- or job-specific entries.
+- Prefer per-unit items (each, hour, foot, sqft, load) over whole-job lump sums.
+- unit_cost_estimate is the fair-market CUSTOMER price per unit (labor + typical materials) for a US solo contractor — a believable starting point the contractor will adjust, never $0.
+- est_minutes_per_unit is realistic labor time per single unit, including setup/cleanup.
+- Categories: short and reusable, matched to the trade (e.g. Panel, Wiring, Devices for an electrician; Rough-in, Fixtures, Drains for a plumber; Prep, Demo, Finish for a remodeler).
+- Always include a "Service call / diagnostics" style item for the trade.
+- confidence reflects how typical/standard the item and price are.
+- If the contractor describes their business, tailor the items and specialties to what they actually do; otherwise use the most common work for the trade.`;
+
+// Generate a generic starter price book from the contractor's trade (and an
+// optional free-text business description). One-shot scaffold — items are
+// tagged 'seeded' and fully editable. Distinct from Solo+ bulk import, which
+// learns the contractor's OWN prices from dictated past jobs.
+export async function draftStarterPriceBook(input: {
+  trade: string;
+  description?: string | null;
+  hourlyRate: number;
+}): Promise<ExtractedPriceBookT> {
+  const response = await client.messages.parse({
+    model: FAST_MODEL,
+    max_tokens: 4000,
+    system: STARTER_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Trade: ${input.trade || "general contractor"}`,
+          `Hourly labor rate: $${input.hourlyRate}/hr`,
+          ...(input.description?.trim()
+            ? [`About their business: """${input.description.trim()}"""`]
+            : []),
+          ``,
+          `Generate the starter price book.`,
+        ].join("\n"),
+      },
+    ],
+    output_config: { format: zodOutputFormat(ExtractedPriceBook) },
+  });
+
+  if (!response.parsed_output) {
+    throw new Error("Starter price book generation returned no structured output");
+  }
+  return response.parsed_output;
+}
+
 export async function extractPriceBook(input: {
   transcripts: string[];
   trade: string;

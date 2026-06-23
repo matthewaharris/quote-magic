@@ -26,10 +26,18 @@ export default function SettingsForm({
     logo_url: string | null;
   };
 }) {
+  const isKnownTrade = (t: string) =>
+    (TRADES as readonly string[]).includes(t);
+
   const [name, setName] = useState(initial.name);
   const [businessName, setBusinessName] = useState(initial.business_name);
   const [phone, setPhone] = useState(initial.phone);
   const [trade, setTrade] = useState(initial.trade);
+  // Custom-trade mode: a saved trade that isn't one of the presets puts the
+  // dropdown into "Other" and reveals the free-text field.
+  const [customTrade, setCustomTrade] = useState(
+    initial.trade !== "" && !isKnownTrade(initial.trade)
+  );
   const [hourlyRate, setHourlyRate] = useState(initial.hourly_rate);
   const [depositPercent, setDepositPercent] = useState(initial.deposit_percent);
   const [markupPercent, setMarkupPercent] = useState(
@@ -138,8 +146,16 @@ export default function SettingsForm({
       <label className="block text-sm text-zinc-600">
         Trade
         <select
-          value={trade}
-          onChange={(e) => setTrade(e.target.value)}
+          value={customTrade ? "__custom__" : trade}
+          onChange={(e) => {
+            if (e.target.value === "__custom__") {
+              setCustomTrade(true);
+              setTrade("");
+            } else {
+              setCustomTrade(false);
+              setTrade(e.target.value);
+            }
+          }}
           className={inputClass}
         >
           <option value="">Pick your trade</option>
@@ -148,7 +164,17 @@ export default function SettingsForm({
               {t}
             </option>
           ))}
+          <option value="__custom__">Other (type your own)…</option>
         </select>
+        {customTrade && (
+          <input
+            value={trade}
+            onChange={(e) => setTrade(e.target.value)}
+            placeholder="e.g. tile setter, fence builder, pressure washing"
+            className={inputClass}
+            autoFocus
+          />
+        )}
       </label>
       <label className="block text-sm text-zinc-600">
         Hourly labor rate ($/hr)

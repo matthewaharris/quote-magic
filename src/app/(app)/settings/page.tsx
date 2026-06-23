@@ -2,6 +2,11 @@ import { requireContractor } from "@/lib/contractor";
 import { createAdminClient } from "@/lib/supabase/server";
 import SettingsForm from "./SettingsForm";
 
+const sectionHeader =
+  "mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400";
+const tileClass =
+  "block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700";
+
 export default async function SettingsPage() {
   const { contractor } = await requireContractor();
 
@@ -19,49 +24,49 @@ export default async function SettingsPage() {
       <p className="mt-1 text-sm text-zinc-500">
         What customers see on your quotes and invoices.
       </p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <a
-          href="/api/export/invoices.csv"
-          className="block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          ⬇️ Invoices CSV
-        </a>
-        <a
-          href="/settings/qr"
-          className="block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          📇 QR truck card
-        </a>
-        <a
-          href="/schedule"
-          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          📅 Working hours & blocked time
-        </a>
-        <a
-          href="/settings/ai"
-          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          ✨ How the AI quotes — view the rules & add your own
-        </a>
-        <a
-          href="/insights"
-          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          📊 Insights — win rate, job value & a tip
-        </a>
-        <a
-          href="/settings/billing"
-          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          💳 Plan & billing
-        </a>
-        <a
-          href="/support"
-          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
-        >
-          💬 Help & support
-        </a>
+      <div className="mt-4 space-y-4">
+        <section>
+          <h2 className={sectionHeader}>Invoicing</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <a href="/api/export/invoices.csv" className={tileClass}>
+              ⬇️ Invoices CSV
+            </a>
+            <a href="/settings/qr" className={tileClass}>
+              📇 QR truck card
+            </a>
+          </div>
+        </section>
+
+        <section>
+          <h2 className={sectionHeader}>Scheduling</h2>
+          <a href="/schedule" className={tileClass}>
+            📅 Working hours & blocked time
+          </a>
+        </section>
+
+        <section>
+          <h2 className={sectionHeader}>Quoting & insights</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <a href="/settings/ai" className={tileClass}>
+              ✨ How the AI quotes
+            </a>
+            <a href="/insights" className={tileClass}>
+              📊 Insights — win rate & a tip
+            </a>
+          </div>
+        </section>
+
+        <section>
+          <h2 className={sectionHeader}>Account & help</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <a href="/settings/billing" className={tileClass}>
+              💳 Plan & billing
+            </a>
+            <a href="/support" className={tileClass}>
+              💬 Help & support
+            </a>
+          </div>
+        </section>
       </div>
       <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm">
         <p className="font-medium text-zinc-700">

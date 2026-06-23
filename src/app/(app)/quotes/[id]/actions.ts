@@ -3,10 +3,49 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
+import { draftCustomerMessage } from "@/lib/ai/quote";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
 import { sendNudge } from "@/lib/nudge";
+import { capabilitiesFor } from "@/lib/plan";
 import { formatMoney } from "@/lib/types";
+
+// Solo+: draft the personal message that goes out with the quote link. The
+// contractor edits it before sending — we never auto-send AI copy.
+export async function draftQuoteMessage(quoteId: string) {
+  const { supabase, contractor } = await requireContractor();
+  if (!capabilitiesFor(contractor).aiCustomerMessage) {
+    return { ok: false as const, message: "Available on Solo and Pro." };
+  }
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("title, job_summary, total")
+    .eq("id", quoteId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, message: "Quote not found." };
+
+  const { data: lines } = await supabase
+    .from("quote_line_items")
+    .select("name")
+    .eq("quote_id", quoteId)
+    .order("sort_order");
+
+  try {
+    const text = await draftCustomerMessage({
+      businessName: contractor.business_name || "your contractor",
+      title: quote.title,
+      jobSummary: quote.job_summary,
+      total: Number(quote.total),
+      lineNames: (lines ?? []).map((l) => l.name),
+    });
+    if (!text) return { ok: false as const, message: "Couldn't draft a message." };
+    return { ok: true as const, text };
+  } catch (err) {
+    console.error("draftQuoteMessage failed:", err);
+    return { ok: false as const, message: "Couldn't draft a message. Try again." };
+  }
+}
 
 // Manual "send reminder" — contractor's call, so the 48h/once-only cron
 // guards are skipped. Each send is still logged as a 'nudged' event.

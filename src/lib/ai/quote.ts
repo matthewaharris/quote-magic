@@ -11,8 +11,50 @@ import {
 } from "./schemas";
 
 const MODEL = "claude-opus-4-8";
+// Lightweight, high-frequency copy (customer messages, nudge lines) goes to a
+// faster/cheaper model — these are short and don't need the quoting reasoning.
+const FAST_MODEL = "claude-haiku-4-5-20251001";
 
 const client = new Anthropic();
+
+const MESSAGE_SYSTEM = `You write the short message a trade contractor sends a homeowner along with a link to their quote. Rules:
+- 2 to 4 sentences, warm and professional, confident but never pushy or salesy.
+- Reference the actual job naturally so it feels personal, not templated.
+- Make it easy to say yes: the link lets them review the quote, accept, and pick a time.
+- Do NOT include the link yourself — the app appends it. No subject line, no markdown.
+- Don't invent prices, dates, or details beyond what you're given.
+- End with just the business name on its own line.`;
+
+// AI-drafted, editable message that accompanies a quote link (Solo+ feature).
+export async function draftCustomerMessage(input: {
+  businessName: string;
+  title: string;
+  jobSummary: string | null;
+  total: number;
+  lineNames: string[];
+}): Promise<string> {
+  const response = await client.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 400,
+    system: MESSAGE_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Business: ${input.businessName}`,
+          `Quote: ${input.title}`,
+          `Job: ${input.jobSummary ?? input.title}`,
+          `Work included: ${input.lineNames.join(", ") || input.title}`,
+          `Total: $${input.total.toFixed(2)}`,
+          ``,
+          `Write the message.`,
+        ].join("\n"),
+      },
+    ],
+  });
+  const block = response.content.find((b) => b.type === "text");
+  return block && block.type === "text" ? block.text.trim() : "";
+}
 
 const QUOTE_SYSTEM = `You are the quoting engine inside QuoteMagic, an app used by trade contractors of every kind — electrical, plumbing, HVAC, carpentry, concrete, tile, drywall, painting, landscaping, roofing, gutters, fencing, hauling, handyman, and general small-job construction — to turn a spoken job description into a structured quote.
 

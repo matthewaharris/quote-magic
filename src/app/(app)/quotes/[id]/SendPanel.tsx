@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Quote } from "@/lib/types";
-import { sendReminder } from "./actions";
+import { draftQuoteMessage, sendReminder } from "./actions";
 
 export default function SendPanel({
   quote,
   shareToken,
+  canDraftMessage = false,
 }: {
   quote: Quote;
   shareToken?: string;
+  canDraftMessage?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -19,6 +21,8 @@ export default function SendPanel({
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [drafting, setDrafting] = useState(false);
 
   const shareUrl = `${
     typeof window !== "undefined"
@@ -26,9 +30,31 @@ export default function SendPanel({
       : (process.env.NEXT_PUBLIC_APP_URL ?? "")
   }/q/${shareToken ?? quote.share_token}`;
 
+  // A drafted message leads; otherwise fall back to the plain default line.
   const smsBody = encodeURIComponent(
-    `Here's your quote for "${quote.title}" — view and accept it here: ${shareUrl}`
+    message.trim()
+      ? `${message.trim()}\n\n${shareUrl}`
+      : `Here's your quote for "${quote.title}" — view and accept it here: ${shareUrl}`
   );
+
+  async function draftMessage() {
+    setDrafting(true);
+    setError(null);
+    const result = await draftQuoteMessage(quote.id);
+    setDrafting(false);
+    if (result.ok) setMessage(result.text);
+    else setError(result.message ?? "Couldn't draft a message.");
+  }
+
+  async function copyMessage() {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(`${message.trim()}\n\n${shareUrl}`);
+      setNotice("Message + link copied.");
+    } catch {
+      setError("Copy failed.");
+    }
+  }
 
   async function markSent(via: "email" | "link") {
     const res = await fetch(`/api/quotes/${quote.id}/send`, {
@@ -110,6 +136,44 @@ export default function SendPanel({
           />
         </div>
       </div>
+
+      {canDraftMessage && (
+        <div className="mt-3">
+          {message ? (
+            <>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              />
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <button
+                  onClick={draftMessage}
+                  disabled={drafting}
+                  className="font-medium text-amber-700 disabled:opacity-50"
+                >
+                  {drafting ? "Drafting…" : "↻ Redraft"}
+                </button>
+                <button
+                  onClick={copyMessage}
+                  className="font-medium text-amber-700"
+                >
+                  Copy message + link
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={draftMessage}
+              disabled={drafting}
+              className="w-full rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 disabled:opacity-50"
+            >
+              {drafting ? "Drafting…" : "✨ Draft a message for the customer"}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-sm font-semibold">
         <button

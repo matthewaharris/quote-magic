@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
+import { capabilitiesFor } from "@/lib/plan";
 import {
   formatMoney,
   type ChangeOrder,
@@ -105,6 +106,7 @@ export default async function QuoteDetailPage({
         invoice={invoice}
         changeOrders={changeOrders}
         sendShareToken={betterToken}
+        canDraftMessage={capabilitiesFor(contractor).aiCustomerMessage}
       />
     </>
   );

@@ -41,6 +41,7 @@ export default function QuoteEditor({
   invoice,
   changeOrders = [],
   sendShareToken,
+  canDraftMessage = false,
 }: {
   quote: Quote;
   initialLines: QuoteLineItem[];
@@ -48,6 +49,7 @@ export default function QuoteEditor({
   invoice?: Invoice | null;
   changeOrders?: ChangeOrder[];
   sendShareToken?: string;
+  canDraftMessage?: boolean;
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
@@ -458,7 +460,13 @@ export default function QuoteEditor({
           />
         </>
       )}
-      {!job && <SendPanel quote={quote} shareToken={sendShareToken} />}
+      {!job && (
+        <SendPanel
+          quote={quote}
+          shareToken={sendShareToken}
+          canDraftMessage={canDraftMessage}
+        />
+      )}
     </div>
   );
 }

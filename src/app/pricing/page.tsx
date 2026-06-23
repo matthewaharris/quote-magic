@@ -5,10 +5,47 @@ import type { PlanTier } from "@/lib/types";
 export const metadata = {
   title: "Pricing — QuoteMagic",
   description:
-    "Simple pricing for solo trade contractors. Start free, then $29/mo.",
+    "Simple pricing for solo trade contractors. Start free, then from $9/mo.",
 };
 
-const FEATURES = [
+// Only list features that actually ship today. Per-tier AI perks get added
+// here as they roll out so the live page never advertises something that
+// isn't built yet.
+const TIER_META: Record<
+  PlanTier,
+  { tagline: string; highlight: boolean; badge?: string; perks: string[] }
+> = {
+  basic: {
+    tagline: "Dip a toe in — for the occasional job.",
+    highlight: false,
+    perks: [
+      "10 AI quotes a month",
+      "Quotes show a “Powered by QuoteMagic” badge",
+      "Build your price book by hand",
+    ],
+  },
+  solo: {
+    tagline: "About a quote a day — where most solo shops live.",
+    highlight: true,
+    badge: "Most popular",
+    perks: [
+      "30 AI quotes a month",
+      "Your logo on quotes — no QuoteMagic badge",
+      "AI import: build your price book from past jobs",
+    ],
+  },
+  pro: {
+    tagline: "For busy contractors who quote everything.",
+    highlight: false,
+    perks: [
+      "150 AI quotes a month",
+      "Everything in Solo",
+      "Best for high-volume weeks",
+    ],
+  },
+};
+
+const SHARED = [
   "AI quotes from your own price book",
   "Good / better / best quote options",
   "Customer link: accept → schedule → invoice → pay",
@@ -25,7 +62,7 @@ export default function PricingPage() {
       <section className="text-center">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
           Simple pricing.{" "}
-          <span className="text-amber-600">Quotes that win jobs.</span>
+          <span className="text-brand-gradient">Quotes that win jobs.</span>
         </h1>
         <p className="mt-3 text-base text-zinc-600">
           Try everything free for 14 days — 25 quotes, no card. Then pick the
@@ -34,45 +71,51 @@ export default function PricingPage() {
       </section>
 
       <section className="mt-8 space-y-4">
-        {tiers.map(([tier, plan]) => (
-          <div
-            key={tier}
-            className={`rounded-2xl bg-white p-5 ${
-              tier === "pro" ? "ring-2 ring-amber-500" : "ring-1 ring-zinc-200"
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-lg font-bold text-zinc-900">
-                  {plan.label}
-                  {tier === "pro" && (
-                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                      Best value
-                    </span>
-                  )}
-                </p>
-                <p className="mt-0.5 text-sm text-zinc-500">
-                  {tier === "solo"
-                    ? "About a quote a day — perfect for most solo shops."
-                    : "For busy contractors who quote everything."}
+        {tiers.map(([tier, plan]) => {
+          const meta = TIER_META[tier];
+          return (
+            <div
+              key={tier}
+              className={`rounded-2xl bg-white p-5 ${
+                meta.highlight
+                  ? "ring-2 ring-amber-500"
+                  : "ring-1 ring-zinc-200"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-lg font-bold text-zinc-900">
+                    {plan.label}
+                    {meta.badge && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        {meta.badge}
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-sm text-zinc-500">{meta.tagline}</p>
+                </div>
+                <p className="text-2xl font-bold text-zinc-900">
+                  ${plan.priceUsd}
+                  <span className="text-sm font-normal text-zinc-500">/mo</span>
                 </p>
               </div>
-              <p className="text-2xl font-bold text-zinc-900">
-                ${plan.priceUsd}
-                <span className="text-sm font-normal text-zinc-500">/mo</span>
-              </p>
+              <ul className="mt-3 space-y-1.5 text-sm text-zinc-700">
+                {meta.perks.map((p) => (
+                  <li key={p} className="flex items-start gap-2">
+                    <span className="text-amber-600">✓</span>
+                    {p}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/login"
+                className="mt-4 block w-full rounded-xl bg-brand-gradient px-5 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:brightness-105"
+              >
+                Start free, then {plan.label}
+              </Link>
             </div>
-            <p className="mt-3 rounded-xl bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-700">
-              {plan.monthlyQuotes} AI quotes every month
-            </p>
-            <Link
-              href="/login"
-              className="mt-4 block w-full rounded-xl bg-amber-600 px-5 py-3 text-center text-base font-semibold text-white shadow-sm hover:bg-amber-700"
-            >
-              Start free, then {plan.label}
-            </Link>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="mt-8 rounded-2xl bg-white p-5 ring-1 ring-zinc-200">
@@ -80,7 +123,7 @@ export default function PricingPage() {
           Every plan includes
         </p>
         <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-          {FEATURES.map((f) => (
+          {SHARED.map((f) => (
             <li key={f} className="flex items-start gap-2">
               <span className="text-amber-600">✓</span>
               {f}

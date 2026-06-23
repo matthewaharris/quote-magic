@@ -26,6 +26,7 @@ const prod = process.argv.includes("--prod");
 // under this Stait AI LLC account bills under its own brand instead of the
 // account default ("STAIT AI LLC").
 const TIERS = [
+  { lookupKey: "basic", name: "QuoteMagic Basic", amountCents: 900, quotes: 10, statementDescriptor: "QUOTEMAGICBASIC" },
   { lookupKey: "solo", name: "QuoteMagic Solo", amountCents: 2900, quotes: 30, statementDescriptor: "QUOTEMAGICSOLO" },
   { lookupKey: "pro", name: "QuoteMagic Pro", amountCents: 5900, quotes: 150, statementDescriptor: "QUOTEMAGICPRO" },
 ];

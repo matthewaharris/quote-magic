@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
+import { capabilitiesFor } from "@/lib/plan";
 
 export interface ReviewedItem {
   name: string;
@@ -14,6 +15,9 @@ export interface ReviewedItem {
 
 export async function saveImportedPriceBook(items: ReviewedItem[]) {
   const { supabase, contractor } = await requireContractor();
+  if (!capabilitiesFor(contractor).bulkImport) {
+    return { ok: false, message: "AI import is available on Solo and Pro." };
+  }
 
   const rows = items
     .filter((i) => i.name.trim().length > 0)

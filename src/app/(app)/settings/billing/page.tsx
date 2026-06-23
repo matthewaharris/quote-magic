@@ -154,6 +154,12 @@ export default async function BillingPage({
       {/* Actions */}
       {subscribed ? (
         <div className="mt-4 space-y-2">
+          {usage.tier === "basic" && (
+            <p className="text-center text-xs text-zinc-500">
+              Want your own branding and AI import? Switch to Solo in Manage
+              billing.
+            </p>
+          )}
           {usage.tier === "solo" && (
             <p className="text-center text-xs text-zinc-500">
               Need more quotes? Switch to Pro (150/mo) in Manage billing.

@@ -12,6 +12,7 @@ import {
 } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
 import { paymentsMode } from "@/lib/payments";
+import { capabilitiesFor } from "@/lib/plan";
 import PrintButton from "@/components/PrintButton";
 import HowToPay from "./HowToPay";
 import ChangeOrderRespond from "./ChangeOrderRespond";
@@ -134,11 +135,14 @@ export default async function PublicQuotePage({
 
   const businessName = contractor.business_name || "Your contractor";
   const payMode = paymentsMode();
+  // White-label (logo, no "Powered by" badge) is a Solo+ perk; Basic shows
+  // the badge and skips the logo. Trial gets the full branded experience.
+  const caps = capabilitiesFor(contractor);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-4 py-8">
       <header className="text-center">
-        {contractor.logo_url && (
+        {contractor.logo_url && caps.whiteLabel && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={contractor.logo_url}
@@ -477,14 +481,16 @@ export default async function PublicQuotePage({
         )}
       </section>
 
-      <p className="print-hide mt-8 text-center text-xs text-zinc-400">
-        <a
-          href="/?utm_source=quote_footer"
-          className="underline decoration-zinc-300 underline-offset-2 hover:text-zinc-600"
-        >
-          ⚡ Powered by QuoteMagic — send quotes like this in minutes
-        </a>
-      </p>
+      {!caps.whiteLabel && (
+        <p className="print-hide mt-8 text-center text-xs text-zinc-400">
+          <a
+            href="/?utm_source=quote_footer"
+            className="underline decoration-zinc-300 underline-offset-2 hover:text-zinc-600"
+          >
+            ⚡ Powered by QuoteMagic — send quotes like this in minutes
+          </a>
+        </p>
+      )}
       <p className="print-hide mt-2 text-center text-[11px] text-zinc-400">
         © 2026 Stait AI LLC ·{" "}
         <a href="/terms" className="underline underline-offset-2">

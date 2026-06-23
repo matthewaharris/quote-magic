@@ -13,7 +13,7 @@ export const TRADES = [
 ] as const;
 
 export type ContractorPlan = "trial" | "comp" | "paid" | "disabled";
-export type PlanTier = "solo" | "pro";
+export type PlanTier = "basic" | "solo" | "pro";
 
 export interface Contractor {
   id: string;

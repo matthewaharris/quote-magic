@@ -8,6 +8,12 @@ export const PLANS: Record<
   PlanTier,
   { label: string; priceUsd: number; monthlyQuotes: number; priceIdEnv: string }
 > = {
+  basic: {
+    label: "Basic",
+    priceUsd: 9,
+    monthlyQuotes: 10,
+    priceIdEnv: "STRIPE_PRICE_BASIC",
+  },
   solo: {
     label: "Solo",
     priceUsd: 29,
@@ -156,7 +162,9 @@ export async function syncStripeSubscription(
     const item = sub.items.data[0];
     const lookup = item?.price.lookup_key;
     const tier: PlanTier | null =
-      lookup === "solo" || lookup === "pro" ? lookup : null;
+      lookup === "basic" || lookup === "solo" || lookup === "pro"
+        ? lookup
+        : null;
     await admin
       .from("contractors")
       .update({

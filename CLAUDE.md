@@ -182,6 +182,39 @@ future second app under this same account sets its own product descriptors.
 Note: per-charge `statement_descriptor_suffix` is card-one-time only and
 does NOT apply to subscriptions; product-level is the only lever here.
 
+## Plans & feature gating
+
+Three tiers (June 22, 2026): **Basic $9 / 10 quotes**, Solo $29 / 30, Pro
+$59 / 150. `src/lib/billing.ts` PLANS + Stripe lookup_keys basic/solo/pro.
+Feature gating lives in `src/lib/plan.ts` — `capabilitiesFor(contractor)`
+returns a capability map; levels basic<solo<pro, with trial+comp = pro
+(full taste) and paid-without-tier = pro. Basic is differentiated by:
+quote volume (10), a "Powered by QuoteMagic" badge instead of white-label
+(customer page shows the badge + hides the contractor logo when
+`!whiteLabel`), and no AI bulk import (the /pricebook/import page shows an
+upgrade card; the extract route + saveImportedPriceBook action also 403/
+reject — defense in depth). Basic still builds a price book by hand +
+learn-as-you-go. Migration 0012 widened the plan_tier check to include
+basic. Pricing page lists only SHIPPED features per tier — add the AI
+perks below as they land so we never advertise unbuilt features.
+
+Per-tier AI features being built in phases (mostly NOT built yet):
+- Solo: AI-drafted customer message (sent with the quote), AI-personalized
+  follow-up/nudge copy.
+- Pro: AI win-back on declines, narrated insights/analytics, photo-measure
+  (estimate quantities from job photos), one-tap job templates.
+The capability flags (aiCustomerMessage, aiFollowup, aiWinBack, aiInsights,
+photoMeasure, jobTemplates) already exist in plan.ts — wire each feature to
+its flag and add it to the pricing page when shipped.
+
+PROD TODO for Basic: run `stripe-setup.mjs --prod` (now includes basic,
+descriptor QUOTEMAGICBASIC) to create the live $9 product/price, add
+`STRIPE_PRICE_BASIC` to Vercel. Customer Portal config predates basic, so
+downgrade-to-basic via the portal won't appear until the portal product
+list is updated (basic→solo/pro upgrades and new basic checkouts work).
+Teams/multi-user (Pro 5 seats) deferred — a separate large build (org model,
+RLS rework), likely its own higher-priced tier, not free seats in Pro.
+
 ## Next up
 
 1. **Stripe prod: LIVE (June 12)** — live products/prices/portal/webhook

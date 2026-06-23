@@ -107,6 +107,7 @@ export default async function QuoteDetailPage({
         changeOrders={changeOrders}
         sendShareToken={betterToken}
         canDraftMessage={capabilitiesFor(contractor).aiCustomerMessage}
+        canWinBack={capabilitiesFor(contractor).aiWinBack}
       />
     </>
   );

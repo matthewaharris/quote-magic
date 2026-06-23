@@ -63,6 +63,45 @@ export async function draftFollowupMessage(input: {
   return block && block.type === "text" ? block.text.trim() : "";
 }
 
+const WINBACK_SYSTEM = `You write the message a trade contractor sends a homeowner who just DECLINED their quote. The goal is to keep the door open, graciously. Rules:
+- 2 to 4 sentences, warm and respectful — thank them for considering you, with zero guilt or hard sell.
+- Gently offer to adjust the scope or price, or to answer whatever concern held them back.
+- Reference the specific job so it feels personal, and make it easy to restart the conversation.
+- Plain prose only: no greeting line, no links, no markdown or HTML. End with just the business name on its own line.`;
+
+// AI-drafted win-back message for a declined quote (Pro feature).
+export async function draftWinBackMessage(input: {
+  businessName: string;
+  title: string;
+  jobSummary: string | null;
+  total: number;
+  customerName?: string | null;
+}): Promise<string> {
+  const response = await client.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 400,
+    system: WINBACK_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Business: ${input.businessName}`,
+          input.customerName ? `Customer: ${input.customerName}` : ``,
+          `Quote: ${input.title}`,
+          `Job: ${input.jobSummary ?? input.title}`,
+          `Total they declined: $${input.total.toFixed(2)}`,
+          ``,
+          `Write the win-back message.`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  const block = response.content.find((b) => b.type === "text");
+  return block && block.type === "text" ? block.text.trim() : "";
+}
+
 // AI-drafted, editable message that accompanies a quote link (Solo+ feature).
 export async function draftCustomerMessage(input: {
   businessName: string;

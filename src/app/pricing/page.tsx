@@ -40,8 +40,8 @@ const TIER_META: Record<
     highlight: false,
     perks: [
       "150 AI quotes a month",
-      "Everything in Solo",
-      "Best for high-volume weeks",
+      "Everything in Solo, plus:",
+      "AI win-back when a customer declines",
     ],
   },
 };

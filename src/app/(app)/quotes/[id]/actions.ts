@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
-import { draftCustomerMessage } from "@/lib/ai/quote";
+import { draftCustomerMessage, draftWinBackMessage } from "@/lib/ai/quote";
 import { actionEmailHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
 import { sendNudge } from "@/lib/nudge";
@@ -43,6 +43,46 @@ export async function draftQuoteMessage(quoteId: string) {
     return { ok: true as const, text };
   } catch (err) {
     console.error("draftQuoteMessage failed:", err);
+    return { ok: false as const, message: "Couldn't draft a message. Try again." };
+  }
+}
+
+// Pro: draft a gracious win-back message for a quote the customer declined.
+export async function draftWinBack(quoteId: string) {
+  const { supabase, contractor } = await requireContractor();
+  if (!capabilitiesFor(contractor).aiWinBack) {
+    return { ok: false as const, message: "Available on Pro." };
+  }
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("title, job_summary, total, status, customer_id")
+    .eq("id", quoteId)
+    .eq("contractor_id", contractor.id)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, message: "Quote not found." };
+
+  let customerName: string | null = null;
+  if (quote.customer_id) {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("id", quote.customer_id)
+      .maybeSingle();
+    customerName = customer?.name ?? null;
+  }
+
+  try {
+    const text = await draftWinBackMessage({
+      businessName: contractor.business_name || "your contractor",
+      title: quote.title,
+      jobSummary: quote.job_summary,
+      total: Number(quote.total),
+      customerName,
+    });
+    if (!text) return { ok: false as const, message: "Couldn't draft a message." };
+    return { ok: true as const, text };
+  } catch (err) {
+    console.error("draftWinBack failed:", err);
     return { ok: false as const, message: "Couldn't draft a message. Try again." };
   }
 }

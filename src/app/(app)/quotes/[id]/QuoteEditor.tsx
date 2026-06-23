@@ -42,6 +42,7 @@ export default function QuoteEditor({
   changeOrders = [],
   sendShareToken,
   canDraftMessage = false,
+  canWinBack = false,
 }: {
   quote: Quote;
   initialLines: QuoteLineItem[];
@@ -50,6 +51,7 @@ export default function QuoteEditor({
   changeOrders?: ChangeOrder[];
   sendShareToken?: string;
   canDraftMessage?: boolean;
+  canWinBack?: boolean;
 }) {
   const [title, setTitle] = useState(quote.title);
   const [taxRate, setTaxRate] = useState(Number(quote.tax_rate));
@@ -465,6 +467,7 @@ export default function QuoteEditor({
           quote={quote}
           shareToken={sendShareToken}
           canDraftMessage={canDraftMessage}
+          canWinBack={canWinBack}
         />
       )}
     </div>

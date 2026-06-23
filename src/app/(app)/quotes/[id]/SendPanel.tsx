@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Quote } from "@/lib/types";
-import { draftQuoteMessage, sendReminder } from "./actions";
+import { draftQuoteMessage, draftWinBack, sendReminder } from "./actions";
 
 export default function SendPanel({
   quote,
   shareToken,
   canDraftMessage = false,
+  canWinBack = false,
 }: {
   quote: Quote;
   shareToken?: string;
   canDraftMessage?: boolean;
+  canWinBack?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -37,10 +39,15 @@ export default function SendPanel({
       : `Here's your quote for "${quote.title}" — view and accept it here: ${shareUrl}`
   );
 
+  // A declined quote gets the win-back draft; otherwise the normal send message.
+  const winBackMode = quote.status === "declined" && canWinBack;
+
   async function draftMessage() {
     setDrafting(true);
     setError(null);
-    const result = await draftQuoteMessage(quote.id);
+    const result = winBackMode
+      ? await draftWinBack(quote.id)
+      : await draftQuoteMessage(quote.id);
     setDrafting(false);
     if (result.ok) setMessage(result.text);
     else setError(result.message ?? "Couldn't draft a message.");
@@ -137,8 +144,13 @@ export default function SendPanel({
         </div>
       </div>
 
-      {canDraftMessage && (
+      {(winBackMode || (canDraftMessage && quote.status !== "declined")) && (
         <div className="mt-3">
+          {winBackMode && !message && (
+            <p className="mb-2 text-xs text-zinc-500">
+              They declined — draft a friendly note to reopen the conversation.
+            </p>
+          )}
           {message ? (
             <>
               <textarea
@@ -169,7 +181,11 @@ export default function SendPanel({
               disabled={drafting}
               className="w-full rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 disabled:opacity-50"
             >
-              {drafting ? "Drafting…" : "✨ Draft a message for the customer"}
+              {drafting
+                ? "Drafting…"
+                : winBackMode
+                  ? "✨ Draft a win-back message"
+                  : "✨ Draft a message for the customer"}
             </button>
           )}
         </div>

@@ -43,6 +43,7 @@ const TIER_META: Record<
       "Everything in Solo, plus:",
       "AI win-back when a customer declines",
       "One-tap starts from your recurring jobs",
+      "Win-rate & job-value insights",
     ],
   },
 };

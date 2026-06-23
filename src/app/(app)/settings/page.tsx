@@ -45,6 +45,12 @@ export default async function SettingsPage() {
           ✨ How the AI quotes — view the rules & add your own
         </a>
         <a
+          href="/insights"
+          className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
+        >
+          📊 Insights — win rate, job value & a tip
+        </a>
+        <a
           href="/settings/billing"
           className="col-span-2 block rounded-xl border border-zinc-300 bg-white px-3 py-3 text-center text-sm font-medium text-zinc-700"
         >

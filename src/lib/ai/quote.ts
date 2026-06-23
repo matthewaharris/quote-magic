@@ -65,6 +65,29 @@ export async function draftFollowupMessage(input: {
   return block && block.type === "text" ? block.text.trim() : "";
 }
 
+// Pro: a short, plain-English read on a contractor's quoting numbers, with
+// one concrete, encouraging takeaway. Caller passes pre-computed metrics.
+export async function narrateInsights(input: {
+  metrics: Record<string, number | null>;
+}): Promise<string> {
+  const response = await client.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 300,
+    system: `You are a friendly business coach for a solo trade contractor. Given their quoting metrics, write 2 to 3 short sentences in plain, encouraging language:
+- Lead with what's going well or the most notable number.
+- Give ONE specific, doable takeaway (e.g. follow up faster, send more options, raise prices) grounded in the numbers.
+- No jargon, no bullet points, no markdown. Speak to "you". If the numbers are thin, say so plainly and encourage them to keep quoting.`,
+    messages: [
+      {
+        role: "user",
+        content: `My quoting numbers (currency in USD, rates are 0..1):\n${JSON.stringify(input.metrics, null, 2)}`,
+      },
+    ],
+  });
+  const block = response.content.find((b) => b.type === "text");
+  return block && block.type === "text" ? block.text.trim() : "";
+}
+
 // Pro: distill a contractor's recurring jobs into one-tap quote starters.
 export async function suggestJobTemplates(input: {
   trade: string;

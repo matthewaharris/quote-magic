@@ -23,6 +23,7 @@ export default function SendPanel({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
+  const [texting, setTexting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [drafting, setDrafting] = useState(false);
@@ -106,11 +107,16 @@ export default function SendPanel({
 
   async function textIt() {
     setError(null);
+    setTexting(true);
     try {
+      // Marking the quote sent is a network call — give feedback so the
+      // delay before the SMS app opens isn't silent.
       await markSent("link");
     } catch {
       // Still open the SMS composer even if marking sent failed.
     }
+    toast("Opening your messages app…");
+    setTexting(false);
     window.location.href = `sms:${phone ? encodeURIComponent(phone) : ""}?&body=${smsBody}`;
   }
 
@@ -202,9 +208,10 @@ export default function SendPanel({
         </button>
         <button
           onClick={textIt}
-          className="rounded-xl border border-zinc-300 py-3 text-zinc-700"
+          disabled={texting}
+          className="rounded-xl border border-zinc-300 py-3 text-zinc-700 disabled:opacity-50"
         >
-          💬 Text
+          {texting ? "Opening…" : "💬 Text"}
         </button>
         <button
           onClick={copyLink}

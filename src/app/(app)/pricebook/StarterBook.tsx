@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 import { generateStarterPriceBook } from "./actions";
 
 // Empty-state bootstrap: AI-generate a starter price book from the
@@ -9,6 +10,7 @@ import { generateStarterPriceBook } from "./actions";
 // the old hardcoded "demo electrician" seed so it works for any trade.
 export default function StarterBook({ trade }: { trade: string }) {
   const router = useRouter();
+  const toast = useToast();
   const [description, setDescription] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -17,8 +19,12 @@ export default function StarterBook({ trade }: { trade: string }) {
     setError(null);
     startTransition(async () => {
       const res = await generateStarterPriceBook(description);
-      if (res.ok) router.refresh();
-      else setError(res.message ?? "Couldn't generate a starter price book.");
+      if (res.ok) {
+        toast(res.message ?? "Starter price book added.");
+        router.refresh();
+      } else {
+        setError(res.message ?? "Couldn't generate a starter price book.");
+      }
     });
   }
 

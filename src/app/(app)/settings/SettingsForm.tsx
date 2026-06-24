@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TRADES } from "@/lib/types";
+import { useToast } from "@/components/Toast";
 import { updateProfile, refreshLogo } from "./actions";
 import { lookupTax } from "../taxActions";
 
@@ -54,15 +55,11 @@ export default function SettingsForm({
 
   const [saving, setSaving] = useState(false);
   const [fetchingLogo, setFetchingLogo] = useState(false);
-  const [message, setMessage] = useState<{
-    kind: "ok" | "error";
-    text: string;
-  } | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setMessage(null);
     const result = await updateProfile({
       name,
       business_name: businessName,
@@ -77,39 +74,33 @@ export default function SettingsForm({
       website_url: website,
     });
     setSaving(false);
-    setMessage(
-      result.ok
-        ? { kind: "ok", text: "Saved." }
-        : { kind: "error", text: result.message ?? "Could not save" }
-    );
+    if (result.ok) toast("Saved.");
+    else toast(result.message ?? "Could not save", "error");
   }
 
   async function findTaxRate() {
     setLookingUpTax(true);
-    setMessage(null);
     const result = await lookupTax(businessZip);
     setLookingUpTax(false);
     if (result.ok) {
       setTaxRate(result.rate);
-      setMessage({
-        kind: "ok",
-        text: `Sales tax${result.region ? ` for ${result.region}` : ""}: ${result.rate}% — save to keep it.`,
-      });
+      toast(
+        `Sales tax${result.region ? ` for ${result.region}` : ""}: ${result.rate}% — save to keep it.`
+      );
     } else {
-      setMessage({ kind: "error", text: result.message ?? "Lookup failed." });
+      toast(result.message ?? "Lookup failed.", "error");
     }
   }
 
   async function fetchLogo() {
     setFetchingLogo(true);
-    setMessage(null);
     const result = await refreshLogo(website);
     setFetchingLogo(false);
     if (result.ok) {
       setLogoUrl(result.logoUrl ?? null);
-      setMessage({ kind: "ok", text: "Logo updated from your website." });
+      toast("Logo updated from your website.");
     } else {
-      setMessage({ kind: "error", text: result.message ?? "Couldn't fetch a logo." });
+      toast(result.message ?? "Couldn't fetch a logo.", "error");
     }
   }
 
@@ -318,16 +309,6 @@ export default function SettingsForm({
       >
         {saving ? "Saving…" : "Save settings"}
       </button>
-
-      {message && (
-        <p
-          className={`text-sm ${
-            message.kind === "ok" ? "text-emerald-700" : "text-red-600"
-          }`}
-        >
-          {message.text}
-        </p>
-      )}
     </form>
   );
 }

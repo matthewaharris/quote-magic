@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney, type ChangeOrder } from "@/lib/types";
+import { useToast } from "@/components/Toast";
 import { addChangeOrder } from "./actions";
 
 const statusStyle: Record<ChangeOrder["status"], string> = {
@@ -21,17 +22,16 @@ export default function ChangeOrdersPanel({
   invoiced: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setMessage(null);
     const result = await addChangeOrder(quoteId, {
       title,
       description,
@@ -39,14 +39,18 @@ export default function ChangeOrdersPanel({
     });
     setBusy(false);
     if (!result.ok) {
-      setMessage(result.message ?? "Could not save");
+      toast(result.message ?? "Could not save", "error");
       return;
     }
     setTitle("");
     setAmount("");
     setDescription("");
     setAdding(false);
-    setMessage(result.emailed ? "Sent to the customer to approve." : "Added — share the quote link so they can approve.");
+    toast(
+      result.emailed
+        ? "Sent to the customer to approve."
+        : "Added — share the quote link so they can approve."
+    );
     router.refresh();
   }
 
@@ -137,8 +141,6 @@ export default function ChangeOrdersPanel({
           ➕ Add change order
         </button>
       )}
-
-      {message && <p className="mt-2 text-sm text-zinc-600">{message}</p>}
     </div>
   );
 }

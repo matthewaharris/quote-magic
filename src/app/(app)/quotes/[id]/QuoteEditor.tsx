@@ -10,6 +10,7 @@ import {
   type Quote,
   type QuoteLineItem,
 } from "@/lib/types";
+import { useToast } from "@/components/Toast";
 import { addLineToPriceBook, saveQuote, type EditableLine } from "./actions";
 import { lookupTax } from "../../taxActions";
 import ChangeOrdersPanel from "./ChangeOrdersPanel";
@@ -65,7 +66,7 @@ export default function QuoteEditor({
   );
   const [lines, setLines] = useState<Line[]>(() => toEditable(initialLines));
   const [dirty, setDirty] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [saving, startSaving] = useTransition();
 
   const subtotal = useMemo(
@@ -137,9 +138,12 @@ export default function QuoteEditor({
           : null,
         lines: lines.map(({ _key, _savedToPb, ...l }) => l),
       });
-      setMessage(result.ok ? "Saved." : (result.message ?? "Save failed"));
-      if (result.ok) setDirty(false);
-      setTimeout(() => setMessage(null), 2500);
+      if (result.ok) {
+        toast("Saved.");
+        setDirty(false);
+      } else {
+        toast(result.message ?? "Save failed", "error");
+      }
     });
   }
 
@@ -150,13 +154,12 @@ export default function QuoteEditor({
     if (result.ok) {
       setTaxRate(result.rate);
       setDirty(true);
-      setMessage(
+      toast(
         `Sales tax${result.region ? ` for ${result.region}` : ""}: ${result.rate}%`
       );
     } else {
-      setMessage(result.message ?? "Lookup failed.");
+      toast(result.message ?? "Lookup failed.", "error");
     }
-    setTimeout(() => setMessage(null), 3000);
   }
 
   async function saveToPriceBook(line: Line) {
@@ -174,8 +177,7 @@ export default function QuoteEditor({
         is_new_item: false,
         _savedToPb: true,
       });
-      setMessage("Added to your price book — future quotes will match it.");
-      setTimeout(() => setMessage(null), 3000);
+      toast("Added to your price book — future quotes will match it.");
     }
   }
 
@@ -443,9 +445,6 @@ export default function QuoteEditor({
         >
           {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
         </button>
-        {message && (
-          <p className="mt-2 text-center text-sm text-zinc-600">{message}</p>
-        )}
       </div>
 
       {job && (

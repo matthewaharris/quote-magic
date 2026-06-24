@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { BusyBlock } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
+import { useToast } from "@/components/Toast";
 import { addBusyBlock, deleteBusyBlock } from "./actions";
 
 // Add/remove personal commitments that block the booking calendar.
@@ -11,6 +12,7 @@ import { addBusyBlock, deleteBusyBlock } from "./actions";
 // panel is just the editor.
 export default function BusyBlocksPanel({ blocks }: { blocks: BusyBlock[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [start, setStart] = useState("08:00");
@@ -28,6 +30,7 @@ export default function BusyBlocksPanel({ blocks }: { blocks: BusyBlock[] }) {
       }
       setTitle("");
       setDate("");
+      toast("Time blocked off.");
       router.refresh();
     });
   }
@@ -35,6 +38,7 @@ export default function BusyBlocksPanel({ blocks }: { blocks: BusyBlock[] }) {
   function remove(id: string) {
     startTransition(async () => {
       await deleteBusyBlock(id);
+      toast("Block removed.");
       router.refresh();
     });
   }

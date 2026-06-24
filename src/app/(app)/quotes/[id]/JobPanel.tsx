@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney, type Invoice, type Job } from "@/lib/types";
 import { formatSlotRange } from "@/lib/scheduling";
+import { useToast } from "@/components/Toast";
 import {
   generateInvoiceNow,
   markDepositReceived,
@@ -30,14 +31,21 @@ export default function JobPanel({
   shareToken: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
 
-  function run(fn: () => Promise<{ ok: boolean; message?: string } & Record<string, unknown>>) {
+  function run(
+    fn: () => Promise<{ ok: boolean; message?: string } & Record<string, unknown>>,
+    successMsg: string
+  ) {
     startTransition(async () => {
       const result = await fn();
-      setMessage(result.ok ? null : (result.message ?? "Something went wrong"));
-      if (result.ok) router.refresh();
+      if (result.ok) {
+        toast(successMsg);
+        router.refresh();
+      } else {
+        toast(result.message ?? "Something went wrong", "error");
+      }
     });
   }
 
@@ -90,7 +98,12 @@ export default function JobPanel({
         job.status === "unscheduled" && (
           <div className="mt-2">
             <button
-              onClick={() => run(() => markDepositReceived(job.id))}
+              onClick={() =>
+                run(
+                  () => markDepositReceived(job.id),
+                  "Deposit recorded — customer notified."
+                )
+              }
               disabled={busy}
               className="w-full rounded-xl border border-emerald-600 py-2.5 text-sm font-semibold text-emerald-700 disabled:opacity-50"
             >
@@ -105,7 +118,12 @@ export default function JobPanel({
 
       {["unscheduled", "scheduled"].includes(job.status) && (
         <button
-          onClick={() => run(() => markJobComplete(job.id))}
+          onClick={() =>
+            run(
+              () => markJobComplete(job.id),
+              "Marked complete — customer asked to confirm."
+            )
+          }
           disabled={busy}
           className="mt-3 w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white disabled:opacity-50"
         >
@@ -120,7 +138,9 @@ export default function JobPanel({
             invoice automatically when they do.
           </p>
           <button
-            onClick={() => run(() => generateInvoiceNow(job.id))}
+            onClick={() =>
+              run(() => generateInvoiceNow(job.id), "Invoice generated.")
+            }
             disabled={busy}
             className="mt-2 w-full rounded-xl border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 disabled:opacity-50"
           >
@@ -132,7 +152,12 @@ export default function JobPanel({
       {job.status === "invoiced" && invoice && invoice.status === "due" && (
         <div className="mt-3">
           <button
-            onClick={() => run(() => markInvoicePaid(job.id))}
+            onClick={() =>
+              run(
+                () => markInvoicePaid(job.id),
+                "Invoice marked paid — receipt sent."
+              )
+            }
             disabled={busy}
             className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white disabled:opacity-50"
           >
@@ -165,7 +190,6 @@ export default function JobPanel({
         </div>
       )}
 
-      {message && <p className="mt-2 text-sm text-red-600">{message}</p>}
     </div>
   );
 }

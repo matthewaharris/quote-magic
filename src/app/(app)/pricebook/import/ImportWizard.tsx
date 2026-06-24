@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Dictation from "@/components/Dictation";
+import { useToast } from "@/components/Toast";
 import { saveImportedPriceBook, type ReviewedItem } from "./actions";
 
 type Step = "dictate" | "review";
 
 export default function ImportWizard() {
   const router = useRouter();
+  const toast = useToast();
   const [step, setStep] = useState<Step>("dictate");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,10 @@ export default function ImportWizard() {
     const result = await saveImportedPriceBook(items);
     setBusy(false);
     if (!result.ok) setError(result.message ?? "Could not save");
-    else router.push("/pricebook");
+    else {
+      toast(`Added ${items.length} items to your price book.`);
+      router.push("/pricebook");
+    }
   }
 
   function patchItem(idx: number, patch: Partial<ReviewedItem>) {

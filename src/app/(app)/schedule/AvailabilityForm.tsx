@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { WeeklyAvailability } from "@/lib/scheduling";
+import { useToast } from "@/components/Toast";
 import { saveAvailability } from "./actions";
 
 const DAYS: { dow: string; label: string }[] = [
@@ -39,15 +40,12 @@ export default function AvailabilityForm({
     )
   );
   const [dirty, setDirty] = useState(false);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(
-    null
-  );
+  const toast = useToast();
   const [saving, startSaving] = useTransition();
 
   function patch(dow: string, p: Partial<DayState>) {
     setDays((prev) => ({ ...prev, [dow]: { ...prev[dow], ...p } }));
     setDirty(true);
-    setMessage(null);
   }
 
   function save() {
@@ -58,12 +56,12 @@ export default function AvailabilityForm({
         payload[dow] = d.open ? { start: d.start, end: d.end } : null;
       }
       const result = await saveAvailability(payload);
-      setMessage(
-        result.ok
-          ? { ok: true, text: "Working hours saved." }
-          : { ok: false, text: result.message ?? "Save failed" }
-      );
-      if (result.ok) setDirty(false);
+      if (result.ok) {
+        toast("Working hours saved.");
+        setDirty(false);
+      } else {
+        toast(result.message ?? "Save failed", "error");
+      }
     });
   }
 
@@ -121,13 +119,6 @@ export default function AvailabilityForm({
       >
         {saving ? "Saving…" : dirty ? "Save working hours" : "Saved"}
       </button>
-      {message && (
-        <p
-          className={`mt-2 text-center text-sm ${message.ok ? "text-emerald-700" : "text-red-600"}`}
-        >
-          {message.text}
-        </p>
-      )}
     </div>
   );
 }

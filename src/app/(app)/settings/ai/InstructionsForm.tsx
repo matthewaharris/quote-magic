@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/Toast";
 import { saveQuotingInstructions } from "../actions";
 
 export default function InstructionsForm({ initial }: { initial: string }) {
   const [value, setValue] = useState(initial);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setMessage(null);
     const result = await saveQuotingInstructions(value);
     setSaving(false);
-    setMessage(result.ok ? "Saved — applies to your next quote." : (result.message ?? "Could not save"));
+    if (result.ok) toast("Saved — applies to your next quote.");
+    else toast(result.message ?? "Could not save", "error");
   }
 
   return (
@@ -43,7 +44,6 @@ export default function InstructionsForm({ initial }: { initial: string }) {
       >
         {saving ? "Saving…" : "Save instructions"}
       </button>
-      {message && <p className="mt-2 text-sm text-zinc-600">{message}</p>}
     </form>
   );
 }

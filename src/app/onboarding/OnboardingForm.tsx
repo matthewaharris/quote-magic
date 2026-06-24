@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { completeOnboarding } from "./actions";
+import { trackRedditSignUp } from "@/lib/reddit";
 
 export default function OnboardingForm() {
   const router = useRouter();
@@ -28,6 +29,9 @@ export default function OnboardingForm() {
       setBusy(false);
       return;
     }
+    // Reddit SignUp conversion (no-op without the pixel). This form only
+    // renders for un-onboarded contractors, so success here is a true signup.
+    trackRedditSignUp();
     // Land on the calendar first so new contractors set working hours and
     // block out existing commitments before their first quote goes out.
     router.push("/schedule?welcome=1");

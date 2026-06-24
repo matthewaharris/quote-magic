@@ -230,6 +230,58 @@ list is updated (basic→solo/pro upgrades and new basic checkouts work).
 Teams/multi-user (Pro 5 seats) deferred — a separate large build (org model,
 RLS rework), likely its own higher-priced tier, not free seats in Pro.
 
+## Growth, analytics & UX (June 23–24, 2026)
+
+- **Per-trade AI starter price book** (replaced the hardcoded electrician
+  demo): `src/lib/ai/quote.ts` `draftStarterPriceBook` (Haiku, reuses
+  `ExtractedPriceBook`), `pricebook/actions.ts` `generateStarterPriceBook`,
+  `StarterBook.tsx` empty-state with optional "describe your business" field;
+  keyed off `contractor.trade`, items tagged `seeded`, all tiers. The AI bulk
+  import entry on `/pricebook` is now clearly labeled + plan-gated (locked
+  upsell for Basic). `scripts/clear-test-pricebooks.mjs` wipes the +basic/
+  +solo/+pro books for re-testing the empty state.
+- **Settings**: Trade dropdown has an "Other (type your own)" custom option
+  (trade was always free-text); action buttons regrouped into titled sections
+  (Invoicing / Scheduling / Quoting & insights / Account & help).
+- **Vercel Web Analytics**: `@vercel/analytics` `<Analytics/>` in the root
+  layout; enabled in the Vercel dashboard. Vercel account upgraded to **Pro**.
+- **New-signup founder email**: `onboarding/actions.ts` `notifyNewSignup`
+  fires once on first onboarding completion (guarded on `onboarded_at`) to
+  `SIGNUP_NOTIFY_EMAIL` (set to matt@stait.ai) via Resend, links to
+  `/admin/[id]`; non-blocking. Unset env var = no email.
+- **Reddit Pixel + ads**: `src/components/RedditPixel.tsx` (base pixel +
+  PageVisit, gated on `NEXT_PUBLIC_REDDIT_PIXEL_ID`=`a2_j81v37a5ffh6`),
+  `src/lib/reddit.ts` `trackRedditSignUp()` fired on onboarding success
+  ("Pixel only" mode; CAPI not built — see Next up #5). Campaign docs:
+  `docs/reddit-ads-targeting.md` (subreddit→`/for/[trade]` table, "No active
+  ad groups" = ad still in review at the ad-group level) and
+  `docs/reddit-ad-creatives.md` (3 native creatives/trade).
+- **Admin-adjustable trial length** (migration 0013): `app_settings` singleton
+  (service-role only, RLS no policies) holds `trial_days` (default 14).
+  `src/lib/settings.ts` `getTrialDays()` (react `cache`d). `getContractor`
+  sets `trial_ends_at` from it at first login via the service-role client
+  (existing trials untouched, DB-default fallback). `/admin` has a
+  "New-signup trial length" control (`setGlobalTrialDays`). All advertised
+  "14 days" copy (landing `/` + `/for/[trade]`, `/pricing`, `/terms`,
+  `/demo`) now derives from `getTrialDays()`; the admin action revalidates
+  those prerendered pages so the number stays truthful. `/demo` was split
+  into a server wrapper + `DemoClient.tsx`. `TRIAL_DAYS=14` is the fallback.
+- **Universal toasts + pointer cursors**: `src/components/Toast.tsx`
+  (`ToastProvider` + `useToast`) mounted in the root layout — bottom-right,
+  fast in / slow out, self-dismiss, success|error|info. `globals.css` base
+  rule restores `cursor: pointer` on buttons/links/selects/checkbox labels
+  (Tailwind v4 Preflight had reset `<button>` to the arrow) + `not-allowed`
+  on disabled. Feedback routed through toasts across SendPanel, JobPanel,
+  QuoteEditor, SettingsForm, AvailabilityForm, BusyBlocksPanel,
+  ChangeOrdersPanel, InstructionsForm, StarterBook, ImportWizard. Send/Text
+  buttons show "Sending…"/"Opening…" working states. Customer `/q` pages were
+  left as-is (their actions transition the page visibly).
+
+VERIFY IN VERCEL (env vars must be added there + redeploy to take effect in
+prod; `.env.local` is dev-only): `NEXT_PUBLIC_REDDIT_PIXEL_ID` and
+`SIGNUP_NOTIFY_EMAIL` — confirm both are set in Vercel (ZIPTAX_API_KEY done).
+`NEXT_PUBLIC_*` vars are baked at build, so they need a redeploy.
+
 ## Next up
 
 1. **Stripe prod: LIVE (June 12)** — live products/prices/portal/webhook
@@ -243,10 +295,12 @@ RLS rework), likely its own higher-priced tier, not free seats in Pro.
    unproven until the first real subscription event lands — check Stripe
    Dashboard → Webhooks for delivery failures after the first paid signup
    (sync-on-success covers checkout regardless).
-2. **ZIPTAX_API_KEY**: configured in .env.local and verified live (June 23,
-   2026). REMAINING — Matt: add `ZIPTAX_API_KEY` to Vercel and redeploy;
-   until then prod tax lookup says "isn't set up yet" (dev works).
+2. **ZIPTAX_API_KEY: DONE** — in .env.local and Vercel, verified live against
+   the v60 endpoint (June 23–24). Tax lookup works in dev and prod.
 3. SMS OTP (Twilio) — deferred.
+5. **Reddit CAPI (deferred)**: pixel is client-side only; the Conversions API
+   (server-to-server SignUp w/ a conversion token) is not built — worthwhile
+   once ad volume grows. Hook point: same onboarding completion path.
 4. **AI-suggested categories (deferred, Matt's idea June 22)**: when
    generation creates an item that isn't in the price book, have it propose
    a category instead of leaving it Uncategorized. Hook point: the

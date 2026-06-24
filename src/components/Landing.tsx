@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTrialDays } from "@/lib/settings";
 
 export interface TradeCopy {
   /* e.g. "electrician" */
@@ -82,7 +83,8 @@ function Cta() {
 
 const LIFECYCLE = ["quote", "accepted", "scheduled", "done", "invoiced", "paid"];
 
-export default function Landing({ trade }: { trade?: TradeCopy }) {
+export default async function Landing({ trade }: { trade?: TradeCopy }) {
+  const trialDays = await getTrialDays();
   const steps = [
     {
       title: "🎙️ Dictate the job",
@@ -135,7 +137,7 @@ export default function Landing({ trade }: { trade?: TradeCopy }) {
           Try it now — no signup
         </Link>
         <p className="mt-3 text-xs text-zinc-500">
-          Free for 14 days · 25 quotes · no card ·{" "}
+          Free for {trialDays} days · 25 quotes · no card ·{" "}
           <Link href="/pricing" className="underline underline-offset-2">
             plans from $29/mo
           </Link>

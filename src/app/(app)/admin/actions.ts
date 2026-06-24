@@ -16,6 +16,13 @@ export async function setGlobalTrialDays(formData: FormData): Promise<void> {
     .update({ trial_days: clamped, updated_at: new Date().toISOString() })
     .eq("id", 1);
   revalidatePath("/admin");
+  // Marketing pages prerender the trial length as static HTML — bust their
+  // caches so the advertised number updates on the next visit.
+  revalidatePath("/");
+  revalidatePath("/pricing");
+  revalidatePath("/terms");
+  revalidatePath("/demo");
+  revalidatePath("/for/[trade]", "page");
 }
 
 // All plan/trial changes go through the service-role client — these columns

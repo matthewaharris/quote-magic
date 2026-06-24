@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PLANS } from "@/lib/billing";
+import { getTrialDays } from "@/lib/settings";
 import type { PlanTier } from "@/lib/types";
 
 export const metadata = {
@@ -58,7 +59,8 @@ const SHARED = [
   "QR truck card & referral link",
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const trialDays = await getTrialDays();
   const tiers = Object.entries(PLANS) as [PlanTier, (typeof PLANS)[PlanTier]][];
 
   return (
@@ -69,7 +71,7 @@ export default function PricingPage() {
           <span className="text-brand-gradient">Quotes that win jobs.</span>
         </h1>
         <p className="mt-3 text-base text-zinc-600">
-          Try everything free for 14 days — 25 quotes, no card. Then pick the
+          Try everything free for {trialDays} days — 25 quotes, no card. Then pick the
           plan that fits how much you quote.
         </p>
       </section>

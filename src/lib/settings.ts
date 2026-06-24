@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { TRIAL_DAYS } from "@/lib/trial";
 
@@ -5,9 +6,11 @@ import { TRIAL_DAYS } from "@/lib/trial";
 // (migration 0013). These helpers use the admin client; never expose them to
 // user-scoped paths that shouldn't write settings.
 
-// Trial length (days) applied to NEW signups. Falls back to the TRIAL_DAYS
-// constant if the row is missing or the read fails.
-export async function getTrialDays(): Promise<number> {
+// Trial length (days) applied to NEW signups, and shown in marketing copy so
+// the advertised number always matches reality. Memoized per request (cache)
+// so multiple readers in one render share a single query. Falls back to the
+// TRIAL_DAYS constant if the row is missing or the read fails.
+export const getTrialDays = cache(async (): Promise<number> => {
   try {
     const { data } = await createAdminClient()
       .from("app_settings")
@@ -19,4 +22,4 @@ export async function getTrialDays(): Promise<number> {
   } catch {
     return TRIAL_DAYS;
   }
-}
+});

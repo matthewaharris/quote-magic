@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTrialDays } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Terms of Service — QuoteMagic",
 };
 
 // Plain-English template — have an attorney review before relying on it.
-export default function TermsPage() {
+export default async function TermsPage() {
+  const trialDays = await getTrialDays();
   return (
     <main className="mx-auto min-h-dvh w-full max-w-lg bg-zinc-50 px-6 pb-16 pt-12">
       <h1 className="text-2xl font-bold text-zinc-900">Terms of Service</h1>
@@ -45,7 +47,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-semibold text-zinc-900">Free trial</h2>
           <p className="mt-1">
-            New accounts include a free trial (currently 14 days or 25
+            New accounts include a free trial (currently {trialDays} days or 25
             quotes, whichever comes first). We may change trial terms,
             introduce paid plans, or discontinue features; we&apos;ll
             communicate material changes to active users.

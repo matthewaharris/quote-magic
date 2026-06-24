@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireContractor } from "@/lib/contractor";
 import { getUsageStatus } from "@/lib/billing";
+import FeedbackWidget from "@/components/FeedbackWidget";
+import WhatsNew from "@/components/WhatsNew";
+import type { ChangelogEntry } from "@/lib/types";
 
 export default async function AppLayout({
   children,
@@ -10,6 +13,15 @@ export default async function AppLayout({
 }) {
   const { supabase, contractor } = await requireContractor();
   if (!contractor.onboarded_at) redirect("/onboarding");
+
+  // Published "What's new" entries (RLS exposes only published rows).
+  const { data: changelogData } = await supabase
+    .from("changelog_entries")
+    .select("*")
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(15);
+  const changelog = (changelogData ?? []) as ChangelogEntry[];
 
   const header = (
     <header className="print-hide sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
@@ -30,6 +42,7 @@ export default async function AppLayout({
         </span>
       </Link>
       <div className="flex items-center gap-3">
+        <WhatsNew entries={changelog} seenAt={contractor.changelog_seen_at} />
         {contractor.is_admin && (
           <Link
             href="/admin"
@@ -139,6 +152,8 @@ export default async function AppLayout({
           </Link>
         </div>
       </nav>
+
+      <FeedbackWidget />
     </div>
   );
 }

@@ -122,6 +122,60 @@ const { error: taxErr } = await anon
   .insert({ zip: "00000", rate: 0 });
 report("user-scoped insert into tax_rates is blocked", !!taxErr);
 
+// 0014: changelog_seen_at must be writable by the user client (granted).
+const { data: seenData, error: seenErr } = await anon
+  .from("contractors")
+  .update({ changelog_seen_at: "2026-01-01T00:00:00Z" })
+  .eq("auth_user_id", userId)
+  .select("changelog_seen_at");
+report(
+  "self-update of changelog_seen_at is allowed",
+  !seenErr && seenData?.length === 1
+);
+if (seenErr) console.log(`        error: ${seenErr.message}`);
+
+// 0014 feedback: a contractor may insert their OWN feedback but never update
+// it (status/admin_notes are owner-only — no update policy exists).
+const { data: meRow } = await admin
+  .from("contractors")
+  .select("id")
+  .eq("auth_user_id", userId)
+  .single();
+const contractorId = meRow?.id;
+
+const { data: fbIns, error: fbInsErr } = await anon
+  .from("feedback")
+  .insert({ contractor_id: contractorId, type: "bug", message: "security-check probe" })
+  .select("id");
+report("insert own feedback is allowed", !fbInsErr && fbIns?.length === 1);
+if (fbInsErr) console.log(`        error: ${fbInsErr.message}`);
+
+const fbId = fbIns?.[0]?.id;
+if (fbId) {
+  // No update policy → the update matches 0 rows (silently), never an error.
+  const { data: fbUpd } = await anon
+    .from("feedback")
+    .update({ status: "done" })
+    .eq("id", fbId)
+    .select("status");
+  const { data: fbCheck } = await admin
+    .from("feedback")
+    .select("status")
+    .eq("id", fbId)
+    .single();
+  report(
+    "self-update of feedback status is blocked",
+    (fbUpd?.length ?? 0) === 0 && fbCheck?.status === "open"
+  );
+  await admin.from("feedback").delete().eq("id", fbId);
+}
+
+// 0014: changelog_entries is owner-authored — user-scoped insert is rejected.
+const { error: clErr } = await anon
+  .from("changelog_entries")
+  .insert({ title: "nope" });
+report("user-scoped insert into changelog_entries is blocked", !!clErr);
+
 // Confirm locked values are untouched.
 const { data: row } = await admin
   .from("contractors")

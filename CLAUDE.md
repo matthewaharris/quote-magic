@@ -282,6 +282,37 @@ prod; `.env.local` is dev-only): `NEXT_PUBLIC_REDDIT_PIXEL_ID` and
 `SIGNUP_NOTIFY_EMAIL` — confirm both are set in Vercel (ZIPTAX_API_KEY done).
 `NEXT_PUBLIC_*` vars are baked at build, so they need a redeploy.
 
+## Feedback & changelog (June 24, 2026)
+
+Built & verified (build + security-check green; migration 0014_feedback_
+changelog). Two in-app loops so users can talk to us and we can announce ships.
+
+- **In-app feedback** — contractors report bugs / ideas from a floating 💬
+  button (bottom-right, above the bottom nav) in `(app)/layout.tsx`. Modal =
+  type chips (bug/feature/other) + message; `submitFeedback`
+  (`src/app/(app)/feedbackActions.ts`) inserts a `feedback` row via the user
+  client (auto-captures `page_url`), confirms via toast. **Triage** at
+  `/admin/feedback`: status filter chips (open|planned|in_progress|done|
+  declined), per-row status select + private `admin_notes`, link to the
+  reporter's `/admin/[id]`. `/admin` shows an open-count badge + nav links to
+  both new pages.
+- **Email alert is wired but DORMANT** — `notifyNewFeedback` mirrors
+  `notifyNewSignup` and only sends when `FEEDBACK_NOTIFY_EMAIL` is set (unset =
+  admin-triage only, the current state). Flip it on later by adding that env
+  var in Vercel; no code change needed.
+- **"What's new" changelog** — admin-authored (DB, not code) at
+  `/admin/changelog`: create/edit entries (version/title/body), publish toggle
+  = sets/clears `published_at`, delete. Customers see a 🔔 in the app header
+  (`WhatsNew.tsx`) with an unseen dot when `max(published_at) >
+  contractor.changelog_seen_at`; opening the panel stamps `changelog_seen_at`
+  via `markChangelogSeen` (`src/app/(app)/changelogActions.ts`). Layout fetches
+  the 15 most-recent published entries (RLS exposes only published rows).
+- **Security (0014, per the 0004 pattern)**: `feedback` RLS = own
+  insert+select only, NO update/delete policy (status/notes are owner-only via
+  service role); `changelog_entries` RLS = read-published-only, authored via
+  service role; `contractors.changelog_seen_at` GRANTed to the user client.
+  `scripts/security-check.mjs` extended with 4 new assertions (all PASS).
+
 ## Next up
 
 1. **Stripe prod: LIVE (June 12)** — live products/prices/portal/webhook

@@ -2,6 +2,96 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
+import type { FeedbackStatus } from "@/lib/types";
+
+const FEEDBACK_STATUSES: FeedbackStatus[] = [
+  "open",
+  "planned",
+  "in_progress",
+  "done",
+  "declined",
+];
+
+// Triage a feedback row: set its status and/or private notes. Service-role
+// write — feedback has no user-scoped update policy (migration 0014).
+export async function updateFeedback(formData: FormData): Promise<void> {
+  const { admin } = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const status = String(formData.get("status") ?? "");
+  const adminNotes = String(formData.get("admin_notes") ?? "").trim();
+  const patch: { status?: FeedbackStatus; admin_notes: string | null; updated_at: string } = {
+    admin_notes: adminNotes || null,
+    updated_at: new Date().toISOString(),
+  };
+  if (FEEDBACK_STATUSES.includes(status as FeedbackStatus)) {
+    patch.status = status as FeedbackStatus;
+  }
+  await admin.from("feedback").update(patch).eq("id", id);
+  revalidatePath("/admin/feedback");
+}
+
+// ── Changelog authoring (service-role; changelog_entries is write-locked to
+// the user client by migration 0014). ──────────────────────────────────────
+
+export async function createChangelogEntry(formData: FormData): Promise<void> {
+  const { admin } = await requireAdmin();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+  const version = String(formData.get("version") ?? "").trim() || null;
+  const body = String(formData.get("body") ?? "").trim();
+  const publish = formData.get("publish") === "on";
+  await admin.from("changelog_entries").insert({
+    title,
+    version,
+    body,
+    published_at: publish ? new Date().toISOString() : null,
+  });
+  revalidatePath("/admin/changelog");
+}
+
+export async function updateChangelogEntry(formData: FormData): Promise<void> {
+  const { admin } = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  if (!id || !title) return;
+  await admin
+    .from("changelog_entries")
+    .update({
+      title,
+      version: String(formData.get("version") ?? "").trim() || null,
+      body: String(formData.get("body") ?? "").trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidatePath("/admin/changelog");
+}
+
+// Flip draft ⇄ published. Publishing stamps published_at = now (so it sorts to
+// the top of What's new and triggers the unseen dot); unpublishing clears it.
+export async function toggleChangelogPublish(id: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  const { data: entry } = await admin
+    .from("changelog_entries")
+    .select("published_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!entry) return;
+  await admin
+    .from("changelog_entries")
+    .update({
+      published_at: entry.published_at ? null : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidatePath("/admin/changelog");
+}
+
+export async function deleteChangelogEntry(id: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  await admin.from("changelog_entries").delete().eq("id", id);
+  revalidatePath("/admin/changelog");
+}
 
 // Global new-signup trial length. Service-role write (app_settings is locked
 // to service-role only). Affects only future signups — existing trials keep

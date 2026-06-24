@@ -42,8 +42,39 @@ export interface Contractor {
   payment_instructions: string | null;
   availability: Record<string, { start: string; end: string } | null>;
   referred_by: string | null;
+  changelog_seen_at: string | null;
   onboarded_at: string | null;
   created_at: string;
+}
+
+export type FeedbackType = "bug" | "feature" | "other";
+export type FeedbackStatus =
+  | "open"
+  | "planned"
+  | "in_progress"
+  | "done"
+  | "declined";
+
+export interface Feedback {
+  id: string;
+  contractor_id: string;
+  type: FeedbackType;
+  message: string;
+  page_url: string | null;
+  status: FeedbackStatus;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChangelogEntry {
+  id: string;
+  version: string | null;
+  title: string;
+  body: string;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PriceBookItem {

@@ -39,17 +39,25 @@ export default async function AdminPage({
   const { contractor: me, admin } = await requireAdmin();
   const { q } = await searchParams;
 
-  const [{ data: contractorsData }, { data: quotesData }, trialDays] =
-    await Promise.all([
-      admin
-        .from("contractors")
-        .select("*")
-        .order("created_at", { ascending: true }),
-      admin
-        .from("quotes")
-        .select("id, contractor_id, created_at, status, tier_group_id"),
-      getTrialDays(),
-    ]);
+  const [
+    { data: contractorsData },
+    { data: quotesData },
+    { count: openFeedback },
+    trialDays,
+  ] = await Promise.all([
+    admin
+      .from("contractors")
+      .select("*")
+      .order("created_at", { ascending: true }),
+    admin
+      .from("quotes")
+      .select("id, contractor_id, created_at, status, tier_group_id"),
+    admin
+      .from("feedback")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+    getTrialDays(),
+  ]);
   const contractors = (contractorsData ?? []) as Contractor[];
   const groups = groupQuotes((quotesData ?? []) as QuoteRow[]);
 
@@ -115,6 +123,26 @@ export default async function AdminPage({
       <p className="mt-1 text-sm text-zinc-500">
         Every contractor on QuoteMagic.
       </p>
+
+      <div className="mt-3 flex gap-2">
+        <Link
+          href="/admin/feedback"
+          className="rounded-full bg-white px-3 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
+        >
+          Feedback
+          {openFeedback ? (
+            <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+              {openFeedback}
+            </span>
+          ) : null}
+        </Link>
+        <Link
+          href="/admin/changelog"
+          className="rounded-full bg-white px-3 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
+        >
+          Changelog
+        </Link>
+      </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {chips.map((chip) => (

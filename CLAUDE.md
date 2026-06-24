@@ -282,6 +282,23 @@ prod; `.env.local` is dev-only): `NEXT_PUBLIC_REDDIT_PIXEL_ID` and
 `SIGNUP_NOTIFY_EMAIL` — confirm both are set in Vercel (ZIPTAX_API_KEY done).
 `NEXT_PUBLIC_*` vars are baked at build, so they need a redeploy.
 
+## Change-order total visibility (June 24, 2026)
+
+Build-verified. Approved change orders always rolled into the *invoice*
+(`issueInvoice`, `src/lib/invoice.ts`) but the contractor never saw the math —
+the quote total intentionally never changes, and pre-invoice nothing showed the
+running total — so it *looked* like approved extras were ignored. The customer
+`/q` invoice already showed the breakdown; this was contractor-side only:
+- **`ChangeOrdersPanel`** now shows an "Adjusted total" footer (quote total + Σ
+  approved COs) before the invoice exists, with a note that pending COs don't
+  count until the customer approves. Takes a new `quoteTotal` prop.
+- **`JobPanel`** issued-invoice card now shows the same breakdown the customer
+  sees (Quote total / + Approved changes / − Deposit paid / Total). New
+  `quoteTotal` prop. Both wired from `QuoteEditor`.
+No data/flow change — change orders still require customer approval and still
+roll in only at invoice issue (idempotent; approval is blocked once the invoice
+exists, so COs must be approved before the customer confirms completion).
+
 ## Feedback & changelog (June 24, 2026)
 
 Built & verified (build + security-check green; migration 0014_feedback_

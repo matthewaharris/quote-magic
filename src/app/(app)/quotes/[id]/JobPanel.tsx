@@ -24,10 +24,12 @@ const stageLabels: Record<Job["status"], string> = {
 export default function JobPanel({
   job,
   invoice,
+  quoteTotal,
   shareToken,
 }: {
   job: Job;
   invoice: Invoice | null;
+  quoteTotal: number;
   shareToken: string;
 }) {
   const router = useRouter();
@@ -171,22 +173,47 @@ export default function JobPanel({
       )}
 
       {invoice && (
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-zinc-50 p-3 text-sm">
-          <div>
-            <p className="font-semibold text-zinc-900">
-              Invoice {invoice.number}
-            </p>
-            <p className="text-xs text-zinc-500">
-              {invoice.status === "paid"
-                ? `Paid · Ref ${invoice.payment_ref}`
-                : `Due ${new Date(invoice.due_at).toLocaleDateString()}`}
-            </p>
+        <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-zinc-900">
+                Invoice {invoice.number}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {invoice.status === "paid"
+                  ? `Paid · Ref ${invoice.payment_ref}`
+                  : `Due ${new Date(invoice.due_at).toLocaleDateString()}`}
+              </p>
+            </div>
+            <span
+              className={`font-bold ${invoice.status === "paid" ? "text-emerald-700" : "text-zinc-900"}`}
+            >
+              {formatMoney(Number(invoice.total))}
+            </span>
           </div>
-          <span
-            className={`font-bold ${invoice.status === "paid" ? "text-emerald-700" : "text-zinc-900"}`}
-          >
-            {formatMoney(Number(invoice.total))}
-          </span>
+          {(Number(invoice.change_orders_total) > 0 ||
+            Number(invoice.deposit_applied) > 0) && (
+            <div className="mt-2 space-y-0.5 border-t border-zinc-200 pt-2 text-xs text-zinc-500">
+              <div className="flex justify-between">
+                <span>Quote total</span>
+                <span>{formatMoney(quoteTotal)}</span>
+              </div>
+              {Number(invoice.change_orders_total) > 0 && (
+                <div className="flex justify-between">
+                  <span>+ Approved changes</span>
+                  <span>
+                    {formatMoney(Number(invoice.change_orders_total))}
+                  </span>
+                </div>
+              )}
+              {Number(invoice.deposit_applied) > 0 && (
+                <div className="flex justify-between">
+                  <span>− Deposit paid</span>
+                  <span>−{formatMoney(Number(invoice.deposit_applied))}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

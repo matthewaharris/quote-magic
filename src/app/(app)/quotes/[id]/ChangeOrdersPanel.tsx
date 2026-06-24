@@ -15,10 +15,12 @@ const statusStyle: Record<ChangeOrder["status"], string> = {
 export default function ChangeOrdersPanel({
   quoteId,
   changeOrders,
+  quoteTotal,
   invoiced,
 }: {
   quoteId: string;
   changeOrders: ChangeOrder[];
+  quoteTotal: number;
   invoiced: boolean;
 }) {
   const router = useRouter();
@@ -56,6 +58,14 @@ export default function ChangeOrdersPanel({
 
   if (changeOrders.length === 0 && invoiced) return null;
 
+  const approvedSum =
+    Math.round(
+      changeOrders
+        .filter((co) => co.status === "approved")
+        .reduce((s, co) => s + Number(co.amount), 0) * 100
+    ) / 100;
+  const hasPending = changeOrders.some((co) => co.status === "pending");
+
   return (
     <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-zinc-200">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
@@ -92,6 +102,28 @@ export default function ChangeOrdersPanel({
             </li>
           ))}
         </ul>
+      )}
+
+      {!invoiced && approvedSum > 0 && (
+        <div className="mt-3 space-y-0.5 border-t border-zinc-100 pt-3 text-sm">
+          <div className="flex justify-between text-zinc-500">
+            <span>Quote total</span>
+            <span>{formatMoney(quoteTotal)}</span>
+          </div>
+          <div className="flex justify-between text-zinc-500">
+            <span>+ Approved changes</span>
+            <span>{formatMoney(approvedSum)}</span>
+          </div>
+          <div className="flex justify-between font-semibold text-zinc-900">
+            <span>Adjusted total</span>
+            <span>{formatMoney(quoteTotal + approvedSum)}</span>
+          </div>
+          <p className="pt-1 text-xs text-zinc-400">
+            {hasPending
+              ? "Approved changes roll into the final invoice. Pending changes aren’t counted until the customer approves them."
+              : "Rolls into the final invoice when you bill the job."}
+          </p>
+        </div>
       )}
 
       {invoiced ? (

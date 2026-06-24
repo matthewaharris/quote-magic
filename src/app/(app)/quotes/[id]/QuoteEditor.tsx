@@ -452,11 +452,13 @@ export default function QuoteEditor({
           <JobPanel
             job={job}
             invoice={invoice ?? null}
+            quoteTotal={Number(quote.total)}
             shareToken={quote.share_token}
           />
           <ChangeOrdersPanel
             quoteId={quote.id}
             changeOrders={changeOrders}
+            quoteTotal={Number(quote.total)}
             invoiced={!!invoice}
           />
         </>

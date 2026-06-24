@@ -4,6 +4,46 @@ import { cookies } from "next/headers";
 import { requireContractor } from "@/lib/contractor";
 import { createAdminClient } from "@/lib/supabase/server";
 import { scrapeAndStoreLogo } from "@/lib/logo";
+import { sendEmail, actionEmailHtml } from "@/lib/email";
+
+// Founder alert: email when a brand-new contractor finishes onboarding.
+// Fires once (the caller guards on first completion). Recipient is the
+// SIGNUP_NOTIFY_EMAIL env var — unset = no notification. Never throws.
+async function notifyNewSignup(input: {
+  contractorId: string;
+  name: string;
+  businessName: string;
+  phone: string;
+  email: string | null;
+}) {
+  try {
+    const to = process.env.SIGNUP_NOTIFY_EMAIL;
+    if (!to) return;
+
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotemagic.app";
+    const rows = [
+      `<strong>${input.name}</strong>`,
+      input.businessName ? `Business: ${input.businessName}` : "",
+      input.phone ? `Phone: ${input.phone}` : "",
+      input.email ? `Email: ${input.email}` : "",
+    ]
+      .filter(Boolean)
+      .join("<br>");
+
+    await sendEmail({
+      to,
+      subject: `🎉 New QuoteMagic signup: ${input.name}${input.businessName ? ` (${input.businessName})` : ""}`,
+      html: actionEmailHtml({
+        heading: "New signup",
+        body: rows,
+        url: `${base}/admin/${input.contractorId}`,
+        cta: "Open in admin",
+      }),
+    });
+  } catch {
+    // A notification must never affect the signup flow.
+  }
+}
 
 // Consume the qm_ref cookie (set by the proxy on ?ref= visits): record who
 // referred this contractor and give the referrer +10 trial quotes. All
@@ -57,6 +97,10 @@ export async function completeOnboarding(input: {
   if (!name) return { ok: false, message: "Please tell us your name." };
   const websiteUrl = input.website_url.trim();
 
+  // Only the FIRST completion is a new signup — re-running onboarding (e.g.
+  // editing the profile) must not re-notify.
+  const isFirstCompletion = !contractor.onboarded_at;
+
   // Mark onboarding complete before attempting the logo scrape — a flaky
   // website must never strand the contractor on this screen.
   const { error } = await supabase
@@ -72,6 +116,16 @@ export async function completeOnboarding(input: {
   if (error) return { ok: false, message: error.message };
 
   await attributeReferral(contractor.id);
+
+  if (isFirstCompletion) {
+    await notifyNewSignup({
+      contractorId: contractor.id,
+      name,
+      businessName: input.business_name.trim(),
+      phone: input.phone.trim(),
+      email: contractor.email,
+    });
+  }
 
   if (websiteUrl) {
     try {

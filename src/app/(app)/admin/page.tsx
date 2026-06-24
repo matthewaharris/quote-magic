@@ -6,8 +6,10 @@ import {
   disableContractor,
   extendTrial,
   reenableContractor,
+  setGlobalTrialDays,
 } from "./actions";
 import { groupQuotes, type QuoteRow } from "./quoteGroups";
+import { getTrialDays } from "@/lib/settings";
 
 const planBadge: Record<ContractorPlan, { label: string; className: string }> =
   {
@@ -37,15 +39,17 @@ export default async function AdminPage({
   const { contractor: me, admin } = await requireAdmin();
   const { q } = await searchParams;
 
-  const [{ data: contractorsData }, { data: quotesData }] = await Promise.all([
-    admin
-      .from("contractors")
-      .select("*")
-      .order("created_at", { ascending: true }),
-    admin
-      .from("quotes")
-      .select("id, contractor_id, created_at, status, tier_group_id"),
-  ]);
+  const [{ data: contractorsData }, { data: quotesData }, trialDays] =
+    await Promise.all([
+      admin
+        .from("contractors")
+        .select("*")
+        .order("created_at", { ascending: true }),
+      admin
+        .from("quotes")
+        .select("id, contractor_id, created_at, status, tier_group_id"),
+      getTrialDays(),
+    ]);
   const contractors = (contractorsData ?? []) as Contractor[];
   const groups = groupQuotes((quotesData ?? []) as QuoteRow[]);
 
@@ -123,6 +127,27 @@ export default async function AdminPage({
           </div>
         ))}
       </div>
+
+      <form
+        action={setGlobalTrialDays}
+        className="mt-4 flex items-end gap-2 rounded-xl border border-zinc-200 bg-white p-3"
+      >
+        <label className="flex-1 text-sm font-medium text-zinc-700">
+          New-signup trial length (days)
+          <input
+            name="trial_days"
+            type="number"
+            min={1}
+            max={365}
+            defaultValue={trialDays}
+            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+          />
+          <span className="mt-1 block text-xs text-zinc-400">
+            Applies to new signups only — existing trials are unchanged.
+          </span>
+        </label>
+        <button className={`${actionButton} mb-5`}>Save</button>
+      </form>
 
       <form method="get" className="mt-4">
         <input

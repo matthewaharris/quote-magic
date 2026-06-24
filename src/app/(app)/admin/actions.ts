@@ -3,6 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 
+// Global new-signup trial length. Service-role write (app_settings is locked
+// to service-role only). Affects only future signups — existing trials keep
+// the trial_ends_at set when they were created.
+export async function setGlobalTrialDays(formData: FormData): Promise<void> {
+  const { admin } = await requireAdmin();
+  const raw = Number(formData.get("trial_days"));
+  if (!Number.isFinite(raw)) return;
+  const clamped = Math.min(365, Math.max(1, Math.round(raw)));
+  await admin
+    .from("app_settings")
+    .update({ trial_days: clamped, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  revalidatePath("/admin");
+}
+
 // All plan/trial changes go through the service-role client — these columns
 // are locked against user-scoped writes (migration 0004). Guard failures are
 // silent no-ops (the UI hides invalid buttons; this is defense in depth).

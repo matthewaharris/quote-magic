@@ -164,8 +164,14 @@ Zip-code tax lookup (June 12, 2026) — BUILT & VERIFIED (migration 0011):
 `src/lib/tax.ts` looks up a zip's combined sales tax via the zip.tax API
 (free tier 100 calls/mo) behind the shared `tax_rates` cache table (90-day
 TTL, service-role only; cache hits don't touch the quota; stale cache beats
-a failed call). Without `ZIPTAX_API_KEY` it stubs 8.25% "Stubville, OK" in
-dev and fails politely in prod. `contractors.business_zip` + /settings
+a failed call). `ZIPTAX_API_KEY` is now configured locally and verified live
+against the v60 endpoint (June 23, 2026 — Beverly Hills 90210 → 9.75%); still
+needs to be added to Vercel for production. Without the key it stubs 8.25%
+"Stubville, OK" in dev and fails politely in prod. NOTE: the live
+`/request/v60?postalcode=` endpoint returns the legacy `results[]`/`taxSales`
+shape `tax.ts` already parses — the OpenAPI docs describe a different
+(address-lookup) schema; don't "fix" the parser to match the docs.
+`contractors.business_zip` + /settings
 "Find my tax rate" fills the default rate; `quotes.job_zip` + quote editor
 "Use local tax rate" fills the per-quote rate; generation extracts job_zip
 from the dictation (schema field, never inferred from city names) and
@@ -237,9 +243,9 @@ RLS rework), likely its own higher-priced tier, not free seats in Pro.
    unproven until the first real subscription event lands — check Stripe
    Dashboard → Webhooks for delivery failures after the first paid signup
    (sync-on-success covers checkout regardless).
-2. **ZIPTAX_API_KEY (Matt)**: sign up at zip.tax (free tier), add the key
-   to .env.local and Vercel — until then tax lookup stubs in dev and says
-   "isn't set up yet" in production.
+2. **ZIPTAX_API_KEY**: configured in .env.local and verified live (June 23,
+   2026). REMAINING — Matt: add `ZIPTAX_API_KEY` to Vercel and redeploy;
+   until then prod tax lookup says "isn't set up yet" (dev works).
 3. SMS OTP (Twilio) — deferred.
 4. **AI-suggested categories (deferred, Matt's idea June 22)**: when
    generation creates an item that isn't in the price book, have it propose
@@ -279,8 +285,9 @@ still tags items "Learned" (its own category, untouched).
   og:image is often a wide banner, not a logo — re-fetch from /settings
 - Contractors created before June 2026 have `name=''` (editable in /settings)
 - Tax lookup: zips don't align perfectly with tax districts — the looked-up
-  rate seeds an always-editable field, it isn't authoritative; ZIPTAX_API_KEY
-  not yet configured (dev stubs 8.25%, prod says "isn't set up yet")
+  rate seeds an always-editable field, it isn't authoritative. ZIPTAX_API_KEY
+  configured & verified locally (June 23); pending in Vercel (prod still says
+  "isn't set up yet" until the key is added there)
 - Support: public /support page (email + FAQ, June 22) links from the
   marketing footer and Settings ("Help & support"); contact address is
   support@stait.ai everywhere (terms, privacy, disabled-account screen).

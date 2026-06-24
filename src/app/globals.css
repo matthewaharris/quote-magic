@@ -54,6 +54,25 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Tailwind v4's Preflight sets <button> cursor to the browser default (arrow),
+   which drops the "this is clickable" affordance. Restore a pointer on
+   interactive elements, and not-allowed when they're disabled. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  select:not(:disabled),
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* Printing a quote/invoice should drop navigation and interactive chrome. */
 @media print {
   .print-hide {

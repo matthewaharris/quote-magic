@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Quote } from "@/lib/types";
+import { useToast } from "@/components/Toast";
 import { draftQuoteMessage, draftWinBack, sendReminder } from "./actions";
 
 export default function SendPanel({
@@ -17,11 +18,11 @@ export default function SendPanel({
   canWinBack?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [drafting, setDrafting] = useState(false);
@@ -57,7 +58,7 @@ export default function SendPanel({
     setError(null);
     try {
       await navigator.clipboard.writeText(`${message.trim()}\n\n${shareUrl}`);
-      setNotice("Message + link copied.");
+      toast("Message + link copied.");
     } catch {
       setError("Copy failed.");
     }
@@ -84,7 +85,7 @@ export default function SendPanel({
     setError(null);
     try {
       await markSent("email");
-      setNotice(`Quote emailed to ${email}.`);
+      toast(`Quote emailed to ${email}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Send failed");
     } finally {
@@ -97,7 +98,7 @@ export default function SendPanel({
     try {
       await navigator.clipboard.writeText(shareUrl);
       await markSent("link");
-      setNotice("Link copied — paste it anywhere.");
+      toast("Link copied — paste it anywhere.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Copy failed");
     }
@@ -197,7 +198,7 @@ export default function SendPanel({
           disabled={sending || !email}
           className="rounded-xl bg-zinc-900 py-3 text-white disabled:opacity-40"
         >
-          📧 Email
+          {sending ? "Sending…" : "📧 Email"}
         </button>
         <button
           onClick={textIt}
@@ -227,7 +228,7 @@ export default function SendPanel({
               setError(null);
               const result = await sendReminder(quote.id);
               setSending(false);
-              if (result.ok) setNotice("Reminder sent.");
+              if (result.ok) toast("Reminder sent.");
               else setError(result.message ?? "Couldn't send reminder");
             }}
             disabled={sending}
@@ -236,7 +237,6 @@ export default function SendPanel({
             🔔 Send reminder
           </button>
         )}
-      {notice && <p className="mt-2 text-sm text-emerald-700">{notice}</p>}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );

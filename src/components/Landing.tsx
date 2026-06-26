@@ -126,18 +126,35 @@ export default async function Landing({ trade }: { trade?: TradeCopy }) {
         </h1>
         <p className="mt-3 text-base text-zinc-600 md:text-lg">
           {trade
-            ? `AI quoting built for solo ${trade.plural} — your prices, your price book, a customer link that closes the job.`
-            : "AI quoting for solo trade contractors — your prices, your price book, a customer link that closes the job."}
+            ? `Stop quoting at 9pm. Dictate the job on site and text the customer a quote before you leave — your prices, on one link that books, schedules, and bills the job.`
+            : "Stop quoting at 9pm. Dictate the job on site and text the customer a quote before you leave the driveway — your prices, on one link that books, schedules, and bills the job."}
         </p>
+
+        {/* The product magic, above the fold. Links to the live no-signup demo.
+            Swap public/demo-hero.gif anytime — no code change needed. */}
+        <Link
+          href="/demo"
+          className="mt-8 block"
+          aria-label="See a dictated job turn into a sent quote"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/demo-hero.gif"
+            alt="A dictated job turning into a priced, sendable quote"
+            className="mx-auto w-full max-w-xs rounded-2xl shadow-xl ring-1 ring-zinc-200 md:max-w-sm"
+          />
+        </Link>
+
         <Cta />
         <Link
           href="/demo"
-          className="mt-3 block text-center text-sm font-medium text-amber-700 underline underline-offset-2"
+          className="mt-3 block w-full rounded-xl border border-zinc-300 bg-white px-5 py-3 text-center text-base font-semibold text-zinc-800 transition hover:bg-zinc-50 md:mx-auto md:max-w-xs"
         >
-          Try it now — no signup
+          ▶ See it work — 30 sec, no signup
         </Link>
         <p className="mt-3 text-xs text-zinc-500">
-          Free for {trialDays} days · 25 quotes · no card ·{" "}
+          Your first quote takes about 2 minutes · Free for {trialDays} days ·
+          25 quotes · no card ·{" "}
           <Link href="/pricing" className="underline underline-offset-2">
             plans from $29/mo
           </Link>

@@ -1,5 +1,18 @@
 import { Resend } from "resend";
 
+// Escape user-controlled text before interpolating it into email HTML.
+// Email clients don't run JS, so this is injection/hygiene hardening rather
+// than XSS defense — but business names, quote titles, and customer-entered
+// text all flow into these templates and must not break or inject markup.
+export function escapeHtml(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Sends via Resend when RESEND_API_KEY is set; otherwise logs to the server
 // console so the flow is testable without an account.
 export async function sendEmail(input: {
@@ -33,7 +46,7 @@ export async function sendEmail(input: {
 // Small logo block shared by the branded templates.
 function logoImg(logoUrl: string | null | undefined) {
   return logoUrl
-    ? `<img src="${logoUrl}" alt="" style="max-height:48px;max-width:160px;margin-bottom:12px;display:block">`
+    ? `<img src="${escapeHtml(logoUrl)}" alt="" style="max-height:48px;max-width:160px;margin-bottom:12px;display:block">`
     : "";
 }
 
@@ -52,7 +65,7 @@ export function actionEmailHtml(input: {
     ${logoImg(input.brand?.logoUrl)}
     ${
       input.brand?.businessName
-        ? `<p style="margin:0 0 12px;font-size:13px;color:#888">${input.brand.businessName}</p>`
+        ? `<p style="margin:0 0 12px;font-size:13px;color:#888">${escapeHtml(input.brand.businessName)}</p>`
         : ""
     }
     <h2 style="margin:0 0 8px">${input.heading}</h2>
@@ -76,13 +89,13 @@ export function quoteEmailHtml(input: {
   return `
   <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
     ${logoImg(input.logoUrl)}
-    <h2 style="margin:0 0 4px">${input.businessName}</h2>
+    <h2 style="margin:0 0 4px">${escapeHtml(input.businessName)}</h2>
     <p style="margin:0 0 16px;color:#555">sent you a quote</p>
     <div style="border:1px solid #e4e4e7;border-radius:12px;padding:16px">
-      <p style="margin:0;font-weight:600">${input.title}</p>
-      <p style="margin:8px 0 0;font-size:24px;font-weight:700">${input.total}</p>
+      <p style="margin:0;font-weight:600">${escapeHtml(input.title)}</p>
+      <p style="margin:8px 0 0;font-size:24px;font-weight:700">${escapeHtml(input.total)}</p>
     </div>
-    <a href="${input.url}" style="display:block;margin-top:16px;background:#18181b;color:#fff;text-align:center;padding:14px;border-radius:12px;text-decoration:none;font-weight:600">
+    <a href="${escapeHtml(input.url)}" style="display:block;margin-top:16px;background:#18181b;color:#fff;text-align:center;padding:14px;border-radius:12px;text-decoration:none;font-weight:600">
       View &amp; respond to quote
     </a>
     <p style="margin-top:16px;font-size:12px;color:#999">Sent with QuoteMagic</p>

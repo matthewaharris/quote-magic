@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/server";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/types";
 import { paymentsMode } from "@/lib/payments";
 
@@ -73,7 +73,7 @@ export async function POST(
       subject: `🎉 Paid: invoice ${invoice.number} — ${formatMoney(Number(invoice.total))}`,
       html: actionEmailHtml({
         heading: "You got paid",
-        body: `Invoice <strong>${invoice.number}</strong> for "<strong>${quote.title}</strong>" was paid (${formatMoney(Number(invoice.total))}). Ref: ${paymentRef}. <em>Simulated payment — no real funds moved.</em>`,
+        body: `Invoice <strong>${escapeHtml(invoice.number)}</strong> for "<strong>${escapeHtml(quote.title)}</strong>" was paid (${formatMoney(Number(invoice.total))}). Ref: ${escapeHtml(paymentRef)}. <em>Simulated payment — no real funds moved.</em>`,
       }),
     });
   }

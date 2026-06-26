@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 
 // Customer approves or declines a change order via the quote share token.
 export async function POST(
@@ -69,7 +69,7 @@ export async function POST(
       subject: `Change order ${newStatus}: ${co.title} ($${Number(co.amount).toFixed(2)}) — ${quote.title}`,
       html: actionEmailHtml({
         heading: `Change order ${newStatus}`,
-        body: `The customer ${newStatus} "<strong>${co.title}</strong>" ($${Number(co.amount).toFixed(2)}) on "<strong>${quote.title}</strong>".${newStatus === "approved" ? " It will be added to the invoice." : ""}`,
+        body: `The customer ${newStatus} "<strong>${escapeHtml(co.title)}</strong>" ($${Number(co.amount).toFixed(2)}) on "<strong>${escapeHtml(quote.title)}</strong>".${newStatus === "approved" ? " It will be added to the invoice." : ""}`,
       }),
     });
   }

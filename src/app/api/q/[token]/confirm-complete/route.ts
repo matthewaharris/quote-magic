@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
 
 // Customer confirms the job is complete (or flags a problem).
@@ -53,7 +53,7 @@ export async function POST(
         html: actionEmailHtml({
           heading: "Customer says something's not right",
           body: body.note
-            ? `Their note: "${body.note}"`
+            ? `Their note: "${escapeHtml(body.note)}"`
             : "They flagged the completion without a note — reach out to them.",
         }),
       });
@@ -80,7 +80,7 @@ export async function POST(
       subject: `✅ Completion confirmed, invoice ${result.invoice.number} sent: ${quote.title}`,
       html: actionEmailHtml({
         heading: "Job confirmed complete",
-        body: `The customer confirmed "<strong>${quote.title}</strong>". Invoice <strong>${result.invoice.number}</strong> was issued automatically.`,
+        body: `The customer confirmed "<strong>${escapeHtml(quote.title)}</strong>". Invoice <strong>${escapeHtml(result.invoice.number)}</strong> was issued automatically.`,
       }),
     });
   }

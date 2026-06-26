@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireContractor } from "@/lib/contractor";
 import { draftCustomerMessage, draftWinBackMessage } from "@/lib/ai/quote";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import { issueInvoice } from "@/lib/invoice";
 import { sendNudge } from "@/lib/nudge";
 import { capabilitiesFor } from "@/lib/plan";
@@ -192,7 +192,7 @@ export async function addChangeOrder(
         subject: `Change to your job: ${title} — $${amount.toFixed(2)}`,
         html: actionEmailHtml({
           heading: "Change to your job",
-          body: `${contractor.business_name || "Your contractor"} proposes a change to "<strong>${quote.title}</strong>": <strong>${title}</strong> — $${amount.toFixed(2)}.${input.description.trim() ? ` ${input.description.trim()}` : ""}`,
+          body: `${escapeHtml(contractor.business_name || "Your contractor")} proposes a change to "<strong>${escapeHtml(quote.title)}</strong>": <strong>${escapeHtml(title)}</strong> — $${amount.toFixed(2)}.${input.description.trim() ? ` ${escapeHtml(input.description.trim())}` : ""}`,
           url,
           cta: "Review & approve",
           brand: {
@@ -400,7 +400,7 @@ export async function markDepositReceived(jobId: string) {
       subject: `Deposit received — pick a time for "${quote.title}"`,
       html: actionEmailHtml({
         heading: "Deposit received ✓",
-        body: `${contractor.business_name || "Your contractor"} received your ${formatMoney(Number(job.deposit_amount))} deposit for "<strong>${quote.title}</strong>". You can now pick an appointment time.`,
+        body: `${escapeHtml(contractor.business_name || "Your contractor")} received your ${formatMoney(Number(job.deposit_amount))} deposit for "<strong>${escapeHtml(quote.title)}</strong>". You can now pick an appointment time.`,
         url,
         cta: "Pick a time",
         brand: {
@@ -467,7 +467,7 @@ export async function markInvoicePaid(jobId: string) {
       subject: `Payment received — invoice ${invoice.number}`,
       html: actionEmailHtml({
         heading: "Payment received — thank you!",
-        body: `${contractor.business_name || "Your contractor"} confirmed your payment of <strong>${formatMoney(Number(invoice.total))}</strong> for invoice <strong>${invoice.number}</strong> ("${quote.title}").`,
+        body: `${escapeHtml(contractor.business_name || "Your contractor")} confirmed your payment of <strong>${formatMoney(Number(invoice.total))}</strong> for invoice <strong>${escapeHtml(invoice.number)}</strong> ("${escapeHtml(quote.title)}").`,
         url,
         cta: "View receipt",
         brand: {
@@ -531,7 +531,7 @@ export async function markJobComplete(jobId: string) {
         subject: `${contractor.business_name || "Your contractor"} finished the job — please confirm`,
         html: actionEmailHtml({
           heading: "Is the job complete?",
-          body: `${contractor.business_name || "Your contractor"} reports "<strong>${quote.title}</strong>" is finished. Take a look and confirm so we can send your invoice.`,
+          body: `${escapeHtml(contractor.business_name || "Your contractor")} reports "<strong>${escapeHtml(quote.title)}</strong>" is finished. Take a look and confirm so we can send your invoice.`,
           url,
           cta: "Review & confirm",
           brand: {

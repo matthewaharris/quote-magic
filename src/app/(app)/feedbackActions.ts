@@ -1,7 +1,7 @@
 "use server";
 
 import { requireContractor } from "@/lib/contractor";
-import { sendEmail, actionEmailHtml } from "@/lib/email";
+import { sendEmail, actionEmailHtml, escapeHtml } from "@/lib/email";
 import type { FeedbackType } from "@/lib/types";
 
 const TYPES: FeedbackType[] = ["bug", "feature", "other"];
@@ -23,10 +23,10 @@ async function notifyNewFeedback(input: {
 
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotemagic.app";
     const rows = [
-      `<strong>${input.type}</strong> from ${input.who}`,
-      input.pageUrl ? `On: ${input.pageUrl}` : "",
+      `<strong>${escapeHtml(input.type)}</strong> from ${escapeHtml(input.who)}`,
+      input.pageUrl ? `On: ${escapeHtml(input.pageUrl)}` : "",
       "",
-      input.message.replace(/\n/g, "<br>"),
+      escapeHtml(input.message).replace(/\n/g, "<br>"),
     ]
       .filter((r) => r !== "")
       .join("<br>");

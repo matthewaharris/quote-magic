@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/types";
 import { paymentsMode } from "@/lib/payments";
 
@@ -72,7 +72,7 @@ export async function POST(
       subject: `💰 Deposit received: ${formatMoney(Number(job.deposit_amount))} — ${quote.title}`,
       html: actionEmailHtml({
         heading: "Deposit received",
-        body: `The customer paid a <strong>${formatMoney(Number(job.deposit_amount))}</strong> deposit on "<strong>${quote.title}</strong>". Ref: ${depositRef}. <em>Simulated payment — no real funds moved.</em>`,
+        body: `The customer paid a <strong>${formatMoney(Number(job.deposit_amount))}</strong> deposit on "<strong>${escapeHtml(quote.title)}</strong>". Ref: ${escapeHtml(depositRef)}. <em>Simulated payment — no real funds moved.</em>`,
       }),
     });
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import {
   formatSlotRange,
   generateSlots,
@@ -121,7 +121,7 @@ export async function POST(
         subject: `🔁 Job rescheduled: ${quote.title} — now ${when}`,
         html: actionEmailHtml({
           heading: "Job rescheduled",
-          body: `The customer moved "<strong>${quote.title}</strong>" from <strong>${wasWhen}</strong> to <strong>${when}</strong>.`,
+          body: `The customer moved "<strong>${escapeHtml(quote.title)}</strong>" from <strong>${wasWhen}</strong> to <strong>${when}</strong>.`,
         }),
       });
     } else {
@@ -130,7 +130,7 @@ export async function POST(
         subject: `📅 Job booked: ${quote.title} — ${when}`,
         html: actionEmailHtml({
           heading: "Job booked",
-          body: `The customer scheduled "<strong>${quote.title}</strong>" for <strong>${when}</strong>.`,
+          body: `The customer scheduled "<strong>${escapeHtml(quote.title)}</strong>" for <strong>${when}</strong>.`,
         }),
       });
     }

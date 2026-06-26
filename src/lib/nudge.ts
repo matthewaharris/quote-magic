@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { draftFollowupMessage } from "@/lib/ai/quote";
-import { actionEmailHtml, sendEmail } from "@/lib/email";
+import { actionEmailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import { capabilitiesFor } from "@/lib/plan";
 import { formatMoney } from "@/lib/types";
 
@@ -74,7 +74,7 @@ export async function sendNudge(
 
   // Solo+: a personalized, job-specific nudge. Any failure falls back to the
   // generic line — a reminder must never be blocked by the AI call.
-  let body = `Your quote for "<strong>${quote.title}</strong>" (${formatMoney(Number(quote.total))}) from ${businessName} is ready whenever you are — questions welcome.`;
+  let body = `Your quote for "<strong>${escapeHtml(quote.title)}</strong>" (${formatMoney(Number(quote.total))}) from ${escapeHtml(businessName)} is ready whenever you are — questions welcome.`;
   if (contractor && capabilitiesFor(contractor).aiFollowup) {
     try {
       const personalized = await draftFollowupMessage({
@@ -83,7 +83,7 @@ export async function sendNudge(
         total: Number(quote.total),
         customerName: customer.name,
       });
-      if (personalized) body = personalized;
+      if (personalized) body = escapeHtml(personalized);
     } catch (err) {
       console.error("nudge: follow-up draft failed, using generic", err);
     }

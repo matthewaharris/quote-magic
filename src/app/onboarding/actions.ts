@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { requireContractor } from "@/lib/contractor";
 import { createAdminClient } from "@/lib/supabase/server";
 import { scrapeAndStoreLogo } from "@/lib/logo";
-import { sendEmail, actionEmailHtml } from "@/lib/email";
+import { sendEmail, actionEmailHtml, escapeHtml } from "@/lib/email";
 
 // Founder alert: email when a brand-new contractor finishes onboarding.
 // Fires once (the caller guards on first completion). Recipient is the
@@ -22,10 +22,10 @@ async function notifyNewSignup(input: {
 
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://quotemagic.app";
     const rows = [
-      `<strong>${input.name}</strong>`,
-      input.businessName ? `Business: ${input.businessName}` : "",
-      input.phone ? `Phone: ${input.phone}` : "",
-      input.email ? `Email: ${input.email}` : "",
+      `<strong>${escapeHtml(input.name)}</strong>`,
+      input.businessName ? `Business: ${escapeHtml(input.businessName)}` : "",
+      input.phone ? `Phone: ${escapeHtml(input.phone)}` : "",
+      input.email ? `Email: ${escapeHtml(input.email)}` : "",
     ]
       .filter(Boolean)
       .join("<br>");

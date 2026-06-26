@@ -44,6 +44,7 @@ const HOTTUB: Line[] = [
 ];
 
 const sum = (ls: Line[]) => ls.reduce((s, l) => s + l.total, 0);
+const HOTTUB_TOTAL = sum(HOTTUB); // 1140
 
 const SCENES = [
   { id: "dictate", label: "Dictate the job" },
@@ -55,9 +56,12 @@ const SCENES = [
   { id: "email", label: "Your customer gets a link" },
   { id: "accept", label: "They accept — their view" },
   { id: "schedule", label: "They pick a time" },
+  { id: "confirm", label: "Job done — they confirm" },
   { id: "invoice", label: "The invoice issues itself" },
   { id: "paid", label: "Paid — the whole job" },
 ] as const;
+
+type SceneId = (typeof SCENES)[number]["id"];
 
 const SRC_PILL: Record<Src, [string, string]> = {
   ai: ["✨ AI suggested", "bg-amber-100 text-amber-700"],
@@ -125,9 +129,21 @@ function QuoteCard({
   );
 }
 
+// Small brand header used on the customer-facing screens.
+function CustomerBrand() {
+  return (
+    <div className="flex items-center gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/quotemagic-icon.png" alt="" className="h-7 w-7 rounded-md" />
+      <span className="text-sm font-bold text-zinc-900">Demo Electric Co.</span>
+    </div>
+  );
+}
+
 export default function DemoClient({ trialDays }: { trialDays: number }) {
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
   const scene = SCENES[i].id;
 
   function generate(target: number) {
@@ -138,9 +154,9 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
     }, 1600);
   }
 
-  // Footer advance button per scene (the interactive scenes — accept, schedule
-  // — advance from buttons inside their own content instead).
-  const advance: Partial<Record<(typeof SCENES)[number]["id"], { label: string; fn: () => void }>> = {
+  // Footer advance button per scene. The interactive scenes (accept, schedule,
+  // confirm) advance from buttons inside their own content instead.
+  const advance: Partial<Record<SceneId, { label: string; fn: () => void }>> = {
     dictate: { label: "✨ Generate quote", fn: () => generate(1) },
     suggested: { label: "Edit the AI’s breaker price →", fn: () => setI(2) },
     editing: { label: "💾 Save to quote + price book", fn: () => setI(3) },
@@ -148,7 +164,7 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
     dictate2: { label: "✨ Generate quote", fn: () => generate(5) },
     quote2: { label: "📲 Send to customer →", fn: () => setI(6) },
     email: { label: "👀 Open as the customer →", fn: () => setI(7) },
-    invoice: { label: "Pay online (demo)", fn: () => setI(10) },
+    invoice: { label: "💳 Pay online (demo)", fn: () => setI(11) },
   };
   const footer = advance[scene];
 
@@ -165,7 +181,10 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
         </span>
         {i > 0 && (
           <button
-            onClick={() => setI(0)}
+            onClick={() => {
+              setPicked(null);
+              setI(0);
+            }}
             className="underline underline-offset-2 hover:text-zinc-700"
           >
             Restart
@@ -325,7 +344,7 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
                   <div className="mt-3 rounded-xl border border-zinc-200 p-3">
                     <p className="font-medium text-zinc-800">Hot tub 240V circuit</p>
                     <p className="mt-1 text-2xl font-bold text-zinc-900">
-                      $1,140.00
+                      {money(HOTTUB_TOTAL)}
                     </p>
                   </div>
                   <div className="mt-3 rounded-xl bg-zinc-900 py-3 text-center text-sm font-semibold text-white">
@@ -338,19 +357,30 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
             {scene === "accept" && (
               <>
                 <Guide>
-                  The customer&apos;s side — clean, branded, mobile. They tap one
-                  button to accept.
+                  The customer&apos;s side — your logo, your business, mobile.
+                  They see clean line items (no AI tags) and tap one button.
                 </Guide>
                 <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-                  <p className="text-xs uppercase tracking-wide text-zinc-400">
-                    Quote from Demo Electric Co.
-                  </p>
-                  <h2 className="mt-1 font-semibold text-zinc-900">
+                  <CustomerBrand />
+                  <h2 className="mt-3 font-semibold text-zinc-900">
                     Hot tub 240V circuit
                   </h2>
-                  <div className="mt-2 flex justify-between text-lg font-bold text-zinc-900">
+                  <ul className="mt-2 divide-y divide-zinc-100">
+                    {HOTTUB.map((l) => (
+                      <li
+                        key={l.name}
+                        className="flex justify-between gap-2 py-1.5 text-sm"
+                      >
+                        <span className="text-zinc-700">{l.name}</span>
+                        <span className="shrink-0 font-medium text-zinc-800">
+                          {money(l.total)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-1 flex justify-between border-t border-zinc-200 pt-2 text-lg font-bold text-zinc-900">
                     <span>Total</span>
-                    <span>$1,140.00</span>
+                    <span>{money(HOTTUB_TOTAL)}</span>
                   </div>
                   <button
                     onClick={() => setI(8)}
@@ -362,6 +392,9 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
                     Ask a question · Decline
                   </p>
                 </div>
+                <p className="mt-2 text-center text-[11px] text-zinc-400">
+                  Powered by QuoteMagic
+                </p>
               </>
             )}
 
@@ -371,23 +404,75 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
                   They pick from times you are actually open — no phone tag. You
                   get notified the moment they book.
                 </Guide>
-                <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-                  <p className="font-semibold text-zinc-900">Pick a time</p>
-                  <div className="mt-3 grid gap-2">
-                    {[
-                      "Thu · 8:00 AM – 4:00 PM",
-                      "Fri · 8:00 AM – 4:00 PM",
-                      "Mon · 8:00 AM – 4:00 PM",
-                    ].map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => setI(9)}
-                        className="rounded-xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 hover:border-amber-500 hover:bg-amber-50"
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                {!picked ? (
+                  <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+                    <CustomerBrand />
+                    <p className="mt-3 font-semibold text-zinc-900">
+                      Pick a time
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      {[
+                        "Thu · 8:00 AM – 4:00 PM",
+                        "Fri · 8:00 AM – 4:00 PM",
+                        "Mon · 8:00 AM – 4:00 PM",
+                      ].map((slot) => (
+                        <button
+                          key={slot}
+                          onClick={() => setPicked(slot)}
+                          className="rounded-xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-700 hover:border-amber-500 hover:bg-amber-50"
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl bg-sky-50 p-5 text-center ring-1 ring-sky-200">
+                    <p className="text-sm font-medium text-sky-700">
+                      📅 Booked &amp; on the calendar
+                    </p>
+                    <p className="mt-1 font-bold text-sky-900">{picked}</p>
+                    <p className="mt-2 text-xs text-sky-700">
+                      A calendar invite went to you both. Need to change it? They
+                      reschedule themselves — no back-and-forth.
+                    </p>
+                    <button
+                      onClick={() => setI(9)}
+                      className="mt-4 w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white"
+                    >
+                      What happens after the job →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {scene === "confirm" && (
+              <>
+                <Guide>
+                  You finish the work and mark it done. The customer gets a
+                  one-tap “all good?” — and confirming is what fires the invoice.
+                </Guide>
+                <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+                  <CustomerBrand />
+                  <div className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
+                    ✅ Demo Electric Co. marked this job complete.
+                  </div>
+                  <h2 className="mt-3 font-semibold text-zinc-900">
+                    Hot tub 240V circuit
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Everything look good on your end?
+                  </p>
+                  <button
+                    onClick={() => setI(10)}
+                    className="mt-4 w-full rounded-2xl bg-emerald-600 py-3.5 text-base font-bold text-white shadow"
+                  >
+                    Yes — confirm it&apos;s done
+                  </button>
+                  <p className="mt-2 text-center text-xs text-zinc-400">
+                    Something off? Let them know
+                  </p>
                 </div>
               </>
             )}
@@ -395,8 +480,8 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
             {scene === "invoice" && (
               <>
                 <Guide>
-                  Job done, customer confirms, and the invoice issues itself —
-                  numbered, net-7, ready to pay online. Nothing to retype.
+                  The moment they confirm, the invoice issues itself — numbered,
+                  net-7, nothing to retype. They pay from the same link.
                 </Guide>
                 <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
                   <div className="flex items-start justify-between">
@@ -410,9 +495,19 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
                       due
                     </span>
                   </div>
-                  <div className="mt-3 flex justify-between border-t border-zinc-100 pt-3 text-lg font-bold text-zinc-900">
+                  <div className="mt-3 space-y-1 border-t border-zinc-100 pt-3 text-sm text-zinc-500">
+                    <div className="flex justify-between">
+                      <span>Hot tub 240V circuit</span>
+                      <span>{money(HOTTUB_TOTAL)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Net 7 · due in 7 days</span>
+                      <span>—</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-lg font-bold text-zinc-900">
                     <span>Amount due</span>
-                    <span>$1,140.00</span>
+                    <span>{money(HOTTUB_TOTAL)}</span>
                   </div>
                 </div>
               </>
@@ -423,17 +518,22 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
                 <div className="mt-2 rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-200">
                   <p className="text-3xl">✅</p>
                   <p className="mt-2 text-lg font-bold text-emerald-900">
-                    Paid — $1,140.00
+                    Paid — {money(HOTTUB_TOTAL)}
                   </p>
-                  <p className="mt-2 text-sm text-emerald-700">
+                  <p className="mt-1 text-xs text-emerald-700">
+                    Receipt emailed · Ref SIM-7F3A2
+                  </p>
+                  <p className="mt-3 text-sm text-emerald-800">
                     Dictated → quoted → edited → sent → accepted → scheduled →
-                    invoiced → paid. One link ran the whole job.
+                    confirmed → invoiced → paid. One link ran the whole job.
                   </p>
                 </div>
-                <Guide>
-                  And every price you tweaked is in your price book — so the next
-                  quote is even faster and already yours.
-                </Guide>
+                <div className="mt-3">
+                  <Guide>
+                    And every price you tweaked is in your price book — so the
+                    next quote is even faster and already yours.
+                  </Guide>
+                </div>
               </>
             )}
           </>
@@ -463,9 +563,7 @@ export default function DemoClient({ trialDays }: { trialDays: number }) {
         <Link
           href="/login"
           className={`mt-3 block w-full rounded-xl px-5 py-3.5 text-base font-semibold text-white ${
-            scene === "paid"
-              ? "bg-brand-gradient shadow-lg"
-              : "bg-zinc-900"
+            scene === "paid" ? "bg-brand-gradient shadow-lg" : "bg-zinc-900"
           }`}
         >
           Start free — quote your own jobs

@@ -7,6 +7,7 @@ import {
   extendTrial,
   reenableContractor,
   setGlobalTrialDays,
+  toggleTestAccount,
 } from "./actions";
 import { groupQuotes, type QuoteRow } from "./quoteGroups";
 import { getTrialDays } from "@/lib/settings";
@@ -61,6 +62,13 @@ export default async function AdminPage({
   const contractors = (contractorsData ?? []) as Contractor[];
   const groups = groupQuotes((quotesData ?? []) as QuoteRow[]);
 
+  // Test/internal accounts are excluded from every headline stat.
+  const testIds = new Set(
+    contractors.filter((c) => c.is_test).map((c) => c.id)
+  );
+  const realContractors = contractors.filter((c) => !c.is_test);
+  const realGroups = groups.filter((g) => !testIds.has(g.contractorId));
+
   const usage = new Map<
     string,
     { count: number; lastAt: string | null; accepted: number; sent: number }
@@ -79,21 +87,24 @@ export default async function AdminPage({
     usage.set(g.contractorId, u);
   }
 
-  const planCounts = contractors.reduce<Record<string, number>>((acc, c) => {
-    acc[c.plan] = (acc[c.plan] ?? 0) + 1;
-    return acc;
-  }, {});
+  const planCounts = realContractors.reduce<Record<string, number>>(
+    (acc, c) => {
+      acc[c.plan] = (acc[c.plan] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
 
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const sentTotal = groups.filter((g) => g.sent).length;
-  const acceptedTotal = groups.filter((g) => g.accepted).length;
+  const sentTotal = realGroups.filter((g) => g.sent).length;
+  const acceptedTotal = realGroups.filter((g) => g.accepted).length;
 
   const chips: { label: string; value: string | number }[] = [
-    { label: "contractors", value: contractors.length },
-    { label: "quotes all-time", value: groups.length },
+    { label: "contractors", value: realContractors.length },
+    { label: "quotes all-time", value: realGroups.length },
     {
       label: "quotes 7d",
-      value: groups.filter((g) => g.createdAt >= weekAgo).length,
+      value: realGroups.filter((g) => g.createdAt >= weekAgo).length,
     },
     {
       label: "accept rate",
@@ -105,17 +116,24 @@ export default async function AdminPage({
     ...(["trial", "comp", "paid", "disabled"] as ContractorPlan[])
       .filter((p) => (planCounts[p] ?? 0) > 0)
       .map((p) => ({ label: p, value: planCounts[p] })),
+    ...(testIds.size > 0
+      ? [{ label: "test (hidden)", value: testIds.size }]
+      : []),
   ];
 
   const needle = q?.trim().toLowerCase();
-  const visible = needle
-    ? contractors.filter((c) =>
-        [c.name, c.business_name, c.email ?? ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(needle)
-      )
-    : contractors;
+  const visible = (
+    needle
+      ? contractors.filter((c) =>
+          [c.name, c.business_name, c.email ?? ""]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle)
+        )
+      : contractors
+  )
+    .slice()
+    .sort((a, b) => Number(a.is_test) - Number(b.is_test));
 
   return (
     <div>
@@ -212,7 +230,9 @@ export default async function AdminPage({
           return (
             <li
               key={c.id}
-              className="rounded-2xl bg-white p-4 ring-1 ring-zinc-200"
+              className={`rounded-2xl bg-white p-4 ring-1 ring-zinc-200 ${
+                c.is_test ? "opacity-60" : ""
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <Link
@@ -230,12 +250,21 @@ export default async function AdminPage({
                     <span className="font-normal text-zinc-400"> (you)</span>
                   )}
                 </Link>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
-                >
-                  {badge.label}
-                  {c.plan === "paid" && c.plan_tier ? ` · ${c.plan_tier}` : ""}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {c.is_test && (
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+                      test
+                    </span>
+                  )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+                  >
+                    {badge.label}
+                    {c.plan === "paid" && c.plan_tier
+                      ? ` · ${c.plan_tier}`
+                      : ""}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-zinc-500">{c.email}</p>
               <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-zinc-600">
@@ -269,6 +298,11 @@ export default async function AdminPage({
                 <Link href={`/admin/${c.id}`} className={actionButton}>
                   Details
                 </Link>
+                <form action={toggleTestAccount.bind(null, c.id)}>
+                  <button className={actionButton}>
+                    {c.is_test ? "Unmark test" : "Mark test"}
+                  </button>
+                </form>
                 {c.plan !== "comp" && (
                   <form action={compContractor.bind(null, c.id)}>
                     <button className={actionButton}>Comp</button>

@@ -282,6 +282,21 @@ prod; `.env.local` is dev-only): `NEXT_PUBLIC_REDDIT_PIXEL_ID` and
 `SIGNUP_NOTIFY_EMAIL` — confirm both are set in Vercel (ZIPTAX_API_KEY done).
 `NEXT_PUBLIC_*` vars are baked at build, so they need a redeploy.
 
+## Test/internal accounts (June 25, 2026)
+
+Build + security-check verified. `contractors.is_test` (migration 0015) flags
+internal/seed accounts so they don't pollute the real funnel. Column-locked
+like `is_admin` (never granted to the user client; the 0004 table-level UPDATE
+revoke makes it service-role-only — security-check asserts it). Toggled from
+`/admin` via `toggleTestAccount` (service role). `/admin` excludes test
+accounts from every headline stat (contractor count, quotes, 7d, accept rate,
+plan counts — all over `realContractors`/`realGroups`), adds a "test (hidden)"
+chip, sorts test accounts last, dims them, badges them "test", and shows a
+Mark/Unmark test button per row. Reusable primitive for future
+analytics/exports exclusion. Currently real = Bryan Miller, Adam Staigle
+(Service Electric), Jay Harris (GSH Associates); the other 9 (both admin
+accounts, +basic/+solo/+pro SKUs, throwaways, security-check) are is_test.
+
 ## Change-order total visibility (June 24, 2026)
 
 Build-verified. Approved change orders always rolled into the *invoice*

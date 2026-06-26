@@ -150,6 +150,23 @@ export async function extendTrial(contractorId: string): Promise<void> {
   revalidatePath("/admin");
 }
 
+// Flag/unflag an account as internal/test — hides it from the /admin stats.
+// Service-role write; is_test is column-locked against the user client (0015).
+export async function toggleTestAccount(contractorId: string): Promise<void> {
+  const { admin } = await requireAdmin();
+  const { data: target } = await admin
+    .from("contractors")
+    .select("is_test")
+    .eq("id", contractorId)
+    .maybeSingle();
+  if (!target) return;
+  await admin
+    .from("contractors")
+    .update({ is_test: !target.is_test })
+    .eq("id", contractorId);
+  revalidatePath("/admin");
+}
+
 export async function disableContractor(contractorId: string): Promise<void> {
   const { contractor: me, admin } = await requireAdmin();
   if (contractorId === me.id) {

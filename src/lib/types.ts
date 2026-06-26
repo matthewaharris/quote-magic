@@ -34,6 +34,7 @@ export interface Contractor {
   trial_ends_at: string;
   trial_quote_limit: number;
   is_admin: boolean;
+  is_test: boolean;
   deposit_percent: number;
   default_markup_percent: number;
   default_tax_rate: number;

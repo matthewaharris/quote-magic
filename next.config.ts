@@ -10,7 +10,7 @@ import type { NextConfig } from "next";
 // Enforced in production only — `next dev` HMR needs eval/websocket leeway.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.redditstatic.com https://va.vercel-scripts.com",
+  "script-src 'self' 'unsafe-inline' https://www.redditstatic.com https://va.vercel-scripts.com https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",

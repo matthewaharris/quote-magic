@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { scrapeAndStoreLogo } from "@/lib/logo";
 import { sendEmail, actionEmailHtml, escapeHtml } from "@/lib/email";
 import { isDisposableEmail } from "@/lib/abuse";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 // Founder alert: email when a brand-new contractor finishes onboarding.
 // Fires once (the caller guards on first completion). Recipient is the
@@ -91,6 +92,7 @@ export async function completeOnboarding(input: {
   phone: string;
   business_name: string;
   website_url: string;
+  captchaToken?: string;
 }) {
   const { supabase, contractor } = await requireContractor();
 
@@ -100,6 +102,12 @@ export async function completeOnboarding(input: {
       message:
         "Please sign up with a permanent email address — disposable inboxes aren't supported.",
     };
+  }
+
+  // No-op unless TURNSTILE_SECRET_KEY is set (see src/lib/turnstile.ts).
+  const captcha = await verifyTurnstile(input.captchaToken);
+  if (!captcha.ok) {
+    return { ok: false, message: "Please complete the verification and try again." };
   }
 
   const name = input.name.trim();

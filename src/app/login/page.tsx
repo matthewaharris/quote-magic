@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Turnstile from "@/components/Turnstile";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Empty unless Turnstile is configured (NEXT_PUBLIC_TURNSTILE_SITE_KEY +
+  // Supabase dashboard CAPTCHA). Passed through to Supabase, which ignores it
+  // when its own CAPTCHA protection is off.
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -21,7 +26,10 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken: captchaToken || undefined,
+      },
     });
     setLoading(false);
     if (error) setError(error.message);
@@ -113,6 +121,7 @@ export default function LoginPage() {
               placeholder="you@example.com"
               className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none placeholder:text-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
             />
+            <Turnstile onToken={setCaptchaToken} />
             <button
               type="submit"
               disabled={loading}

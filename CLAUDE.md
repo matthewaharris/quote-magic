@@ -282,6 +282,56 @@ prod; `.env.local` is dev-only): `NEXT_PUBLIC_REDDIT_PIXEL_ID` and
 `SIGNUP_NOTIFY_EMAIL` — confirm both are set in Vercel (ZIPTAX_API_KEY done).
 `NEXT_PUBLIC_*` vars are baked at build, so they need a redeploy.
 
+## Security hardening (June 26, 2026)
+
+Pre-launch pass against a "vibe-coder gets sued" checklist. Build-verified.
+What was ALREADY solid (verified, not re-done): RLS on every public table +
+the 0004 column-lockdown; no secrets in the frontend (only the anon key /
+supabase url / reddit pixel / app url are `NEXT_PUBLIC_*`); server-side
+recompute of all money/time; hosted Stripe Checkout (no client secrets);
+`/q/[token]` runs on the service role but only passes scalar props to client
+components, so internal contractor fields never reach the browser; dev-login
+404s in prod. CORS is intentionally NOT treated as a control (auth + share
+tokens are).
+
+Added this pass:
+- **Security headers** (`next.config.ts` `headers()`): HSTS, X-Frame-Options
+  DENY, nosniff, Referrer-Policy, Permissions-Policy (camera/mic = self for
+  photo+voice), X-DNS-Prefetch-Control on every response; **CSP production-only**
+  (dev HMR needs eval/ws). CSP allowlist = self + Supabase (img/connect) +
+  redditstatic + va.vercel-scripts.com + challenges.cloudflare.com; uses
+  `'unsafe-inline'` for scripts (nonce-based CSP is a future hardening). NOTE:
+  after deploy, confirm the Reddit pixel + Vercel Analytics still fire and quote
+  pages render (CSP can silently block) — roll back by removing the CSP entry if
+  so.
+- **Email HTML escaping** (`escapeHtml` in `src/lib/email.ts`): applied to every
+  user-controlled value interpolated into email HTML — quote titles, business
+  names, change-order titles/descriptions, the customer completion note
+  (untrusted external input). Stops a contractor injecting phishing markup into
+  QuoteMagic-branded customer emails. `quoteEmailHtml`/`actionEmailHtml` escape
+  their own brand fields; call sites escape body values.
+- **Trial-abuse cost gate** (`src/lib/abuse.ts`): disposable-email denylist +
+  best-effort per-account in-memory rate limiter. `generate-quote` (10/min) and
+  `extract-pricebook` (5/min) reject disposable inboxes (`DISPOSABLE_EMAIL`) and
+  bursts (`RATE_LIMITED` 429) BEFORE any model call — the trial's 25 free Opus
+  generations were the main uncapped cost vector (trial = pro caps, so the
+  import endpoint was reachable too). Onboarding also rejects disposable emails.
+  Limits: denylist is incomplete; limiter is per-serverless-instance. Durable
+  fixes = Turnstile (below, now built) + a shared-store (Upstash) limiter.
+- **Cloudflare Turnstile (built, DORMANT)**: `src/components/Turnstile.tsx`
+  (renders only if `NEXT_PUBLIC_TURNSTILE_SITE_KEY` set) on `/login` +
+  `/onboarding`; `src/lib/turnstile.ts` `verifyTurnstile` (no-op unless
+  `TURNSTILE_SECRET_KEY` set) gates `completeOnboarding`; login passes
+  `captchaToken` to Supabase `signInWithOtp`. TO ACTIVATE: create a Turnstile
+  widget, add `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (needs redeploy — baked at build)
+  + `TURNSTILE_SECRET_KEY` in Vercel, and for login enable CAPTCHA in the
+  Supabase dashboard (Auth → Settings, Turnstile, paste the secret). Until then
+  it's fully inert.
+
+DEFERRED (discussed, not built): nonce-based CSP; Upstash shared-store rate
+limiting; generic-error-message mapping (most actions are RLS-scoped + authed,
+low leak risk — left as-is).
+
 ## Test/internal accounts (June 25, 2026)
 
 Build + security-check verified. `contractors.is_test` (migration 0015) flags

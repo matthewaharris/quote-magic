@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { completeOnboarding } from "./actions";
 import { trackRedditSignUp } from "@/lib/reddit";
+import Turnstile from "@/components/Turnstile";
 
 export default function OnboardingForm() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function OnboardingForm() {
   const [phone, setPhone] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [website, setWebsite] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +25,7 @@ export default function OnboardingForm() {
       phone,
       business_name: businessName,
       website_url: website,
+      captchaToken,
     });
     if (!result.ok) {
       setError(result.message ?? "Could not save");
@@ -68,6 +71,7 @@ export default function OnboardingForm() {
         placeholder="Website (optional — we'll grab your logo)"
         className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none placeholder:text-zinc-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
       />
+      <Turnstile onToken={setCaptchaToken} />
       <button
         type="submit"
         disabled={busy}

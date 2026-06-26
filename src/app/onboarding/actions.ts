@@ -5,6 +5,7 @@ import { requireContractor } from "@/lib/contractor";
 import { createAdminClient } from "@/lib/supabase/server";
 import { scrapeAndStoreLogo } from "@/lib/logo";
 import { sendEmail, actionEmailHtml, escapeHtml } from "@/lib/email";
+import { isDisposableEmail } from "@/lib/abuse";
 
 // Founder alert: email when a brand-new contractor finishes onboarding.
 // Fires once (the caller guards on first completion). Recipient is the
@@ -92,6 +93,14 @@ export async function completeOnboarding(input: {
   website_url: string;
 }) {
   const { supabase, contractor } = await requireContractor();
+
+  if (isDisposableEmail(contractor.email)) {
+    return {
+      ok: false,
+      message:
+        "Please sign up with a permanent email address — disposable inboxes aren't supported.",
+    };
+  }
 
   const name = input.name.trim();
   if (!name) return { ok: false, message: "Please tell us your name." };

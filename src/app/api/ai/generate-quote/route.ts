@@ -8,6 +8,7 @@ import {
 import { getUsageStatus } from "@/lib/billing";
 import { capabilitiesFor } from "@/lib/plan";
 import { isValidZip, lookupTaxRate } from "@/lib/tax";
+import { isDisposableEmail, rateLimit } from "@/lib/abuse";
 import type { PriceBookItem } from "@/lib/types";
 
 export const maxDuration = 120;
@@ -41,6 +42,26 @@ export async function POST(request: Request) {
             daysLeft: usage.daysLeft,
           },
       { status: 403 }
+    );
+  }
+
+  // Cost gates before any model call: disposable inboxes can't farm free
+  // trial generations, and a per-account burst limit blunts scripted loops.
+  if (isDisposableEmail(contractor.email)) {
+    return NextResponse.json(
+      {
+        error:
+          "Please use a permanent email address to generate quotes — disposable inboxes aren't supported.",
+        code: "DISPOSABLE_EMAIL",
+      },
+      { status: 403 }
+    );
+  }
+  const limited = rateLimit(`generate-quote:${contractor.id}`, 10, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "Too many quotes at once — give it a moment.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfter) } }
     );
   }
 

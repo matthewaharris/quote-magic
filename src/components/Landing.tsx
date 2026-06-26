@@ -130,18 +130,23 @@ export default async function Landing({ trade }: { trade?: TradeCopy }) {
             : "Stop quoting at 9pm. Dictate the job on site and text the customer a quote before you leave the driveway — your prices, on one link that books, schedules, and bills the job."}
         </p>
 
-        {/* The product magic, above the fold. Links to the live no-signup demo.
-            Swap public/demo-hero.gif anytime — no code change needed. */}
+        {/* The product magic, above the fold — the full 12-chapter walkthrough
+            as a light autoplay loop. Links to the live no-signup demo. Swap
+            public/demo-hero.mp4 anytime; demo-hero.gif stays as the fallback. */}
         <Link
           href="/demo"
           className="mt-8 block"
-          aria-label="See a dictated job turn into a sent quote"
+          aria-label="See a dictated job turn into a sent, accepted, paid quote"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/demo-hero.gif"
-            alt="A dictated job turning into a priced, sendable quote"
-            className="mx-auto w-full max-w-xs rounded-2xl shadow-xl ring-1 ring-zinc-200 md:max-w-sm"
+          <video
+            src="/demo-hero.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-label="A dictated job turning into a priced, sent, accepted, and paid quote"
+            className="mx-auto aspect-[500/755] w-full max-w-xs rounded-2xl bg-zinc-100 object-cover shadow-xl ring-1 ring-zinc-200 md:max-w-sm"
           />
         </Link>
 

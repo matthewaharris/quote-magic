@@ -156,7 +156,7 @@ export default async function Landing({ trade }: { trade?: TradeCopy }) {
           Your first quote takes about 2 minutes · Free for {trialDays} days ·
           25 quotes · no card ·{" "}
           <Link href="/pricing" className="underline underline-offset-2">
-            plans from $29/mo
+            plans from $9/mo
           </Link>
         </p>
       </section>

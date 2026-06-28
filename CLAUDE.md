@@ -2,6 +2,9 @@
 
 # QuoteMagic — Project State
 
+> **Building the native iOS app?** Start with `docs/ios-app-handoff.md` (and
+> the `ios/` directory). This file remains the backend/web source of truth.
+
 AI quoting engine for solo trade contractors: dictate a job → Claude drafts a
 structured quote from the contractor's own price book → edit → send link →
 customer accepts → schedules a slot → contractor marks complete → customer

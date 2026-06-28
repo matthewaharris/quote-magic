@@ -1,0 +1,42 @@
+# Xcode / Swift build artifacts — keep these out of the repo.
+# https://github.com/github/gitignore/blob/main/Swift.gitignore
+
+## Build
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.perspectivev3
+!default.perspectivev3
+
+## Xcode user/workspace state
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+## Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+## CocoaPods / Carthage (only if used)
+Pods/
+Carthage/Build/
+
+## Misc
+*.ipa
+*.dSYM.zip
+*.dSYM
+.DS_Store
+
+# Secrets — never commit signing or runtime secrets.
+# Supabase URL + anon key are public/RLS-protected, but keep them in a
+# gitignored config (e.g. Secrets.xcconfig / Config.local.swift) rather than
+# hardcoded, so this stays consistent if other keys are ever added.
+Secrets.xcconfig
+*.local.xcconfig
+GoogleService-Info.plist

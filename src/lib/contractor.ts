@@ -1,26 +1,27 @@
 import { redirect } from "next/navigation";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import {
+  createClient,
+  createAdminClient,
+  createTokenClient,
+} from "@/lib/supabase/server";
 import { getTrialDays } from "@/lib/settings";
 import type { Contractor } from "@/lib/types";
 
-// Loads the signed-in contractor, creating the row on first login.
-// Returns null when there is no session (use in route handlers).
-export async function getContractor() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
+// Load (or create on first login) the contractor row for an authenticated
+// user. `supabase` must be a client scoped to THAT user — cookie- or
+// token-bound — so RLS applies. Throws if the row cannot be created.
+async function loadOrCreateContractor(
+  supabase: SupabaseClient,
+  user: User
+): Promise<Contractor> {
   const { data: existing } = await supabase
     .from("contractors")
     .select("*")
     .eq("auth_user_id", user.id)
     .maybeSingle();
-
-  if (existing) {
-    return { supabase, user, contractor: existing as Contractor };
-  }
+  if (existing) return existing as Contractor;
 
   // Upsert: layout and page render in parallel on first login, so two
   // creates can race — onConflict makes this idempotent.
@@ -32,7 +33,6 @@ export async function getContractor() {
     )
     .select("*")
     .single();
-
   if (error || !created) {
     throw new Error(`Failed to create contractor profile: ${error?.message}`);
   }
@@ -59,7 +59,37 @@ export async function getContractor() {
   } catch {
     // Keep the DB-default trial if anything above fails.
   }
+  return contractor;
+}
 
+// Loads the signed-in contractor, creating the row on first login.
+// Authenticates by EITHER the session cookie (web) OR an `Authorization:
+// Bearer <Supabase access token>` header (native / non-browser API clients —
+// see docs/ios-app-handoff.md). Returns null when there is no valid session.
+export async function getContractor() {
+  // Native/API callers send a bearer token instead of the cookie. Try that
+  // first; the token client validates the JWT and is RLS-scoped to that user.
+  const authHeader = (await headers()).get("authorization");
+  if (authHeader?.toLowerCase().startsWith("bearer ")) {
+    const token = authHeader.slice(7).trim();
+    if (!token) return null;
+    const supabase = createTokenClient(token);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    const contractor = await loadOrCreateContractor(supabase, user);
+    return { supabase, user, contractor };
+  }
+
+  // Browser session (cookies).
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const contractor = await loadOrCreateContractor(supabase, user);
   return { supabase, user, contractor };
 }
 

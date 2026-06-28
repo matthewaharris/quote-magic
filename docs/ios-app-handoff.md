@@ -63,32 +63,28 @@ Stripe secret, or Resend key.
 
 ---
 
-## 3. THE backend prerequisite — token auth on `/api/*`  ⚠️
+## 3. Backend prerequisite — token auth on `/api/*`  ✅ DONE
 
-Today every API route authenticates with **session cookies**
-(`src/lib/contractor.ts` → `getContractor()` → `createClient()` in
-`src/lib/supabase/server.ts`, which reads `cookies()`). A native app sends no
-cookies, so **the API routes can't authenticate a mobile caller yet.**
+**Implemented (June 2026).** `getContractor()` now authenticates by EITHER the
+session cookie (web, unchanged) OR an `Authorization: Bearer <Supabase access
+token>` header (native / API clients). So **every existing `/api/*` route that
+calls `getContractor()` already accepts a mobile caller** — no further backend
+work needed to start the app.
 
-**Task (do this in the web repo first — can be done from any machine):** make
-`getContractor()` accept a `Authorization: Bearer <supabase_access_token>`
-header as an alternative to the cookie. Sketch:
+How it works (`src/lib/contractor.ts` + `src/lib/supabase/server.ts`):
+- A bearer header → `createTokenClient(token)` builds a supabase-js client with
+  `Authorization: Bearer <token>` on every request, so **RLS applies as that
+  user** (the service-role key is never involved). The token is validated with
+  `auth.getUser(token)`; invalid/expired → `401`.
+- No bearer header → the original cookie flow (web is byte-for-byte unchanged).
 
-```ts
-// in getContractor(), before the cookie path:
-const authz = headers().get("authorization");
-if (authz?.startsWith("Bearer ")) {
-  const token = authz.slice(7);
-  const admin = createAdminClient();
-  const { data: { user } } = await admin.auth.getUser(token); // validates the JWT
-  if (user) { /* load/create the contractor row by user.id, return it */ }
-}
-// else fall through to the existing cookie-based flow (web unchanged)
-```
+From iOS: get the token from `supabase.auth.session.accessToken` and send it as
+`Authorization: Bearer <token>` on each `/api/*` call. On `401`, refresh the
+session (the SDK does this automatically) and retry.
 
-This keeps the web app 100% unchanged and unlocks every existing `/api/*` route
-for the app. It is the single highest-leverage backend change — do it in Phase 0
-and verify with `curl -H "Authorization: Bearer <token>"`.
+Verified by `scripts/mobile-auth-check.mjs` (run the dev server, then
+`node --env-file=.env.local scripts/mobile-auth-check.mjs`): no token → 401,
+valid token → authenticated, garbage token → 401.
 
 (CORS is **not** a concern — native apps aren't browsers and ignore it.)
 
@@ -226,7 +222,8 @@ be copied/referenced there.
 4. **Decisions to confirm with Matt** (see §11) — at minimum monetization path,
    bundle id, and monorepo-vs-split.
 5. **Phase 0** (prove the stack):
-   - Land the Bearer-token change in the web API (§3); verify with `curl`.
+   - API token auth is **already done** (§3) — optionally re-verify with
+     `node --env-file=.env.local scripts/mobile-auth-check.mjs` (dev server up).
    - Scaffold the SwiftUI app in `ios/`; add `supabase-swift` (SPM).
    - Configure Supabase URL + anon key (ask Matt or read the web env notes).
    - Build: **OTP sign-in → fetch and list the contractor's quotes**. That one
@@ -254,7 +251,8 @@ are the only config the app needs; everything secret stays behind `/api/*`.
 
 ## 12. Suggested phase plan
 
-- **Phase 0 — Stack proof:** token auth on API + OTP sign-in + quotes list.
+- **Phase 0 — Stack proof:** OTP sign-in + quotes list. (API token auth is
+  already shipped — §3.)
 - **Phase 1 — New quote:** native dictation → `generate-quote` → render result.
 - **Phase 2 — Edit & send:** line-item editing (totals server-authoritative) +
   send the `/q` link via share sheet / `send` route.

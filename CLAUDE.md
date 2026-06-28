@@ -37,7 +37,11 @@ dashboard (stats + comp / extend-trial / disable / re-enable, gated by
   Dark mode is a planned follow-up (Midnight palette + toggle; mockup proved
   it at /design-explorer.html, an uncommitted throwaway in public/).
 - Supabase: Postgres + magic-link auth (`@supabase/ssr`); session refresh in
-  `src/proxy.ts` (Next 16 proxy convention, not middleware)
+  `src/proxy.ts` (Next 16 proxy convention, not middleware). `getContractor()`
+  (`src/lib/contractor.ts`) authenticates by EITHER the session cookie (web) OR
+  an `Authorization: Bearer <access token>` header (native/API clients, via
+  `createTokenClient` — RLS-scoped, for the iOS app; see
+  `docs/ios-app-handoff.md`, verified by `scripts/mobile-auth-check.mjs`)
 - Claude API: `claude-opus-4-8`, `thinking: {type:"adaptive"}`, structured
   outputs via `client.messages.parse` + `zodOutputFormat` — see `src/lib/ai/`
 - Contractor pages: RLS-scoped via `requireContractor()` (`src/lib/contractor.ts`)

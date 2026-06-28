@@ -84,7 +84,10 @@ session (the SDK does this automatically) and retry.
 
 Verified by `scripts/mobile-auth-check.mjs` (run the dev server, then
 `node --env-file=.env.local scripts/mobile-auth-check.mjs`): no token → 401,
-valid token → authenticated, garbage token → 401.
+valid token → authenticated, garbage token → 401. Note: on the security-check
+test account a valid token returns **403 "trial ended"**, not 400 — that still
+proves auth passed (it reached the trial/quota check after loading the
+contractor); run against a comped/active account for a clean 400.
 
 (CORS is **not** a concern — native apps aren't browsers and ignore it.)
 
